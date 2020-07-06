@@ -4,6 +4,7 @@ from models      import *
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 def train_net(device):
 
@@ -32,7 +33,7 @@ def train_net(device):
 	tot_batch = len(train_loader)
 	print('There are {} batcheds'.format(tot_batch))
 
-	net = BaseNet(in_channels=3, n_classes=5)
+	net = BaseNet(in_channels=3, n_classes=5, dimMode=3)
 	net = net.to(device)
 
 	criterion = nn.CrossEntropyLoss().to(device)
@@ -107,11 +108,11 @@ def train_net(device):
 	plt.savefig(this_model_path[:-3]+'.png')
 
 
+
+
 # main run function 
 if __name__ == '__main__':
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	print('Running with '+str(device)+'...')
 
 	train_net(device)
-
-	# test(device)

@@ -10,11 +10,14 @@ import torch.nn.functional as F
 from convlstm_SreenivasVRao import *
 
 # Define normalization type
-def define_norm(n_channel,norm_type,n_group=None):
+def define_norm(n_channel,norm_type,n_group=None,dimMode=2):
 	# define and use different types of normalization steps 
 	# Referred to https://pytorch.org/docs/stable/_modules/torch/nn/modules/normalization.html
 	if norm_type is 'bn':
-		return nn.BatchNorm2d(n_channel)
+		if dimMode == 2:
+			return nn.BatchNorm2d(n_channel)
+		elif dimMode == 3:
+			return nn.BatchNorm3d(n_channel)
 	elif norm_type is 'gn':
 		if n_group is None: n_group=2 # default group num is 2
 		return nn.GroupNorm(n_group,n_channel)
@@ -27,11 +30,41 @@ def define_norm(n_channel,norm_type,n_group=None):
 	else:
 		return ValueError('Normalization type - '+norm_type+' is not defined yet')
 
-# conv block
-class ConvBlock(nn.Module):
+# Conv3D block 
+class Conv3DBlock(nn.Module):
+	''' 
+	use conv3D than multiple Conv2D blocks (for a sake of computational burden)
+
+	INPUT dimension: BxCxTxHxW
+	'''
+	def __init__(self, inplane, outplane, kernel_size=3, stride=1,padding=1,norm_type=None):
+		# kernel_size, stride, padding should be int scalar value, not tuple nor list
+		super(Conv3DBlock,self).__init__()
+		# parameters
+		self.norm_type = norm_type
+
+		# layers
+		self.conv      = nn.Conv3d(inplane,outplane,kernel_size=(1,kernel_size,kernel_size),
+								   stride=(1,stride,stride),padding=(1,padding,padding))
+		self.relu      = nn.ReLU(inplace=True)
+		self.maxpool   = nn.MaxPool3d(kernel_size=(1,2,2), stride=(1,2,2))		
+		self.norm_layer= define_norm(outplane,norm_type,dimMode=3)
+
+	def forward(self,x):
+
+		x = self.conv(x)
+		x = self.relu(x)
+		x = self.maxpool(x)
+		if self.norm_layer is not None:
+			x = self.norm_layer(x)
+
+		return x
+
+# conv2d block
+class Conv2DBlock(nn.Module):
 	# Conv building block 
 	def __init__(self, inplane, outplane, kernel_size=3, stride=1,padding=1,norm_type=None):
-		super(ConvBlock,self).__init__()
+		super(Conv2DBlock,self).__init__()
 		# parameters
 		self.norm_type = norm_type
 
@@ -51,12 +84,12 @@ class ConvBlock(nn.Module):
 
 		return x
 
-# Baseline network 
+# Baseline network
 class BaseNet(nn.Module):
 
 	def __init__(self, in_channels, n_classes, n_convBlocks=2, norm_type='bn', 
 		         conv_n_feats=[3, 32, 64], clstm_hidden=[128, 256], fc_n_hidden=None,
-		         return_all_layers=False):
+		         return_all_layers=False, dimMode=2):
 		super(BaseNet, self).__init__()
 
 		# initial parameter settings
@@ -66,14 +99,23 @@ class BaseNet(nn.Module):
 			self.fc_n_hidden = n_classes*5
 		else: 
 			self.fc_n_hidden = fc_n_hidden
+		self.dimMode = dimMode
 
 		# primary convolution blocks for preprocessing and feature extraction
 		layers = []
-		for ii in range(n_convBlocks): 
-			block = ConvBlock(self.conv_n_feats[ii],self.conv_n_feats[ii+1],norm_type=norm_type)
-			layers.append(block)
+		if dimMode ==2:
+			for ii in range(n_convBlocks): 
+				block = Conv2DBlock(self.conv_n_feats[ii],self.conv_n_feats[ii+1],norm_type=norm_type)
+				layers.append(block)
 
-		self.primaryConv = nn.Sequential(*layers)
+			self.primaryConv2D = nn.Sequential(*layers)
+		elif dimMode==3:
+			for ii in range(n_convBlocks): 
+				block = Conv3DBlock(self.conv_n_feats[ii],self.conv_n_feats[ii+1],norm_type=norm_type)
+				layers.append(block)
+
+			self.primaryConv3D = nn.Sequential(*layers)
+
 		# Two layers of convLSTM
 		self.convlstm   = ConvLSTM(in_channels=self.conv_n_feats[n_convBlocks], 
 			                       hidden_channels=self.clstm_hidden, kernel_size=(3,3),
@@ -89,14 +131,19 @@ class BaseNet(nn.Module):
 
 	def forward(self,x):
 		# arg: x is a list of images
-		# pass images in the list x to primaryConv layer and then stack/concat them to make 5D tensor
+		# if self.dimMode = 2: pass images in the list x to primaryConv2D layer and then stack/concat them to make 5D tensor
+		# elif self.dimMode = 3: Stack to 5D layer and then pass 5d (BxCxTxHxW) to primaryConv3D and transpose it to BxTxCxHxW
 		img = []
 
-		for ii, w in enumerate(x):
-			w = self.primaryConv(w)
-			img.append(w)
-
-		img = torch.stack(img, 1)    # stacked img: 5D tensor => B x T x C x H x W
+		if self.dimMode == 2 : 
+			for ii, w in enumerate(x):
+				w = self.primaryConv2D(w)
+				img.append(w)
+			img = torch.stack(img, 1)    # stacked img: 5D tensor => B x T x C x H x W
+		elif self.dimMode == 3 :
+			img = torch.stack(x,2) 		 # stacked img: 5D tensor => B x C x T x H x W
+			img = self.primaryConv3D(img)
+			img = torch.transpose(img,2,1)  # Transpose B x C x T x H x W --> B x T x C x H x W
 		
 		img, _ = self.convlstm(img)  # img: 5D tensor => B x T x Filters x H x W
 
@@ -109,6 +156,44 @@ class BaseNet(nn.Module):
 		img = self.classifier(img)
 
 		return img
+
+
+# MODEL TESTING FUNCTIONS 
+# NOT A CORE FUNCTION
+def compare_speed(device):
+	import time
+	'''
+	Compare conv3D and conv2D speeds
+
+	- Results with the random conv function & filter is weird : takes less time when computed first
+	'''
+	n_frame = 40
+	m3 = nn.Conv3d(16, 32, (1, 3, 3), stride=(1,2,2),bias=False).to(device)
+	m2 = nn.Conv2d(16, 32, 3, stride=2,bias=False).to(device)
+	input = torch.randn(20, 16, n_frame, 50, 100).to(device)
+	conv_filter = torch.randn(32, 16, 1, 3, 3).to(device)
+	with torch.no_grad():
+		m3.weight = torch.nn.Parameter(conv_filter)
+		m2.weight = torch.nn.Parameter(conv_filter.squeeze())
+
+	# Compare speed of Conv3D v.s. Conv2D
+	output3 = m3(input)
+	
+	start2  = time.time()
+	output2=[]
+	for ii in range(n_frame):
+		out = m2(input[:,:,ii,:,:].squeeze())
+		output2.append(out)
+	output2 = torch.stack(output2, 2)
+	print('Conv 2d forward path took {}'.format(time.time()-start2))
+	output2.sum().backward()
+	print('Conv 2d + backward process took {}'.format(time.time()-start2))
+
+	start3  = time.time()
+	output3 = m3(input)
+	print('Conv 3d forward path took {}'.format(time.time()-start3))
+	output3.sum().backward()
+	print('Conv 3d + backward process took {}'.format(time.time()-start3))
 
 if __name__ == '__main__':
 	# usage example 
