@@ -8,4 +8,4 @@ The repository is largely on production
 
 ## Model structures 
 - Default structure:
-![default_structure](/images/model_default_structure.png)
+![default_structure](/images/model_default_structure.jpg)
