@@ -7,6 +7,7 @@ https://github.com/SreenivasVRao/ConvGRU-ConvLSTM-PyTorch
 
 HISTORY
 - 2020-06-29 (Oh-hyeon Choung) : ConvLSTM._init_hidden() removed .cuda() part
+- 2020-07-10 (Oh-hyeon Choung) : Add 'device' argument in all classes 
 """
 
 import torch.nn as nn
@@ -18,10 +19,11 @@ class ConvLSTMCell(nn.Module):
     Basic CLSTM cell.
     """
 
-    def __init__(self, in_channels, hidden_channels, kernel_size, bias):
+    def __init__(self, in_channels, hidden_channels, kernel_size, bias, device='cpu'):
 
         super(ConvLSTMCell, self).__init__()
 
+        self.device = device
         self.input_dim  = in_channels
         self.hidden_dim = hidden_channels
 
@@ -54,14 +56,14 @@ class ConvLSTMCell(nn.Module):
         return h_next, c_next
 
     def init_hidden(self, b, h, w):
-        return (torch.zeros(b, self.hidden_dim, h, w),
-                torch.zeros(b, self.hidden_dim, h, w))
+        return (torch.zeros(b, self.hidden_dim, h, w).to(self.device),
+                torch.zeros(b, self.hidden_dim, h, w).to(self.device))
 
 
 class ConvLSTM(nn.Module):
 
     def __init__(self, in_channels, hidden_channels, kernel_size, num_layers,
-                 batch_first=False, bias=True, return_all_layers=False):
+                 batch_first=False, bias=True, return_all_layers=False, device='cpu'):
         super(ConvLSTM, self).__init__()
 
         self._check_kernel_size_consistency(kernel_size)
@@ -79,6 +81,7 @@ class ConvLSTM(nn.Module):
         self.batch_first = batch_first
         self.bias = bias
         self.return_all_layers = return_all_layers
+        self.device = device
 
         cell_list = []
         for i in range(0, self.num_layers):
@@ -87,7 +90,7 @@ class ConvLSTM(nn.Module):
             cell_list.append(ConvLSTMCell(in_channels=cur_input_dim,
                                           hidden_channels=self.hidden_dim[i],
                                           kernel_size=self.kernel_size[i],
-                                          bias=self.bias))
+                                          bias=self.bias, device=self.device))
 
         self.cell_list = nn.ModuleList(cell_list)
 
@@ -164,13 +167,15 @@ class ConvLSTM(nn.Module):
 class ConvBLSTM(nn.Module):
     # Constructor
     def __init__(self, in_channels, hidden_channels,
-                 kernel_size, num_layers, bias=True, batch_first=False):
+                 kernel_size, num_layers, bias=True, batch_first=False, device='cpu'):
 
         super(ConvBLSTM, self).__init__()
+
+        self.device = device
         self.forward_net = ConvLSTM(in_channels, hidden_channels//2, kernel_size,
-                                    num_layers, batch_first=batch_first, bias=bias)
+                                    num_layers, batch_first=batch_first, bias=bias, device=self.device)
         self.reverse_net = ConvLSTM(in_channels, hidden_channels//2, kernel_size,
-                                    num_layers, batch_first=batch_first, bias=bias)
+                                    num_layers, batch_first=batch_first, bias=bias, device=self.device)
         
     def forward(self, xforward, xreverse):
         """

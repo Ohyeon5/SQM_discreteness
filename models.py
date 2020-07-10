@@ -89,10 +89,11 @@ class BaseNet(nn.Module):
 
 	def __init__(self, in_channels, n_classes, n_convBlocks=2, norm_type='bn', 
 		         conv_n_feats=[3, 32, 64], clstm_hidden=[128, 256], fc_n_hidden=None,
-		         return_all_layers=False, dimMode=2):
+		         return_all_layers=False, dimMode=2, device='cpu'):
 		super(BaseNet, self).__init__()
 
 		# initial parameter settings
+		self.device = device
 		self.conv_n_feats = conv_n_feats
 		self.clstm_hidden = clstm_hidden
 		if fc_n_hidden is None:
@@ -119,7 +120,8 @@ class BaseNet(nn.Module):
 		# Two layers of convLSTM
 		self.convlstm   = ConvLSTM(in_channels=self.conv_n_feats[n_convBlocks], 
 			                       hidden_channels=self.clstm_hidden, kernel_size=(3,3),
-								   num_layers=2, batch_first=True, bias=True, return_all_layers=return_all_layers)
+								   num_layers=2, batch_first=True, 
+								   bias=True, return_all_layers=return_all_layers, device=self.device)
 		self.avgpool    = nn.AdaptiveAvgPool2d((2, 2))
 		self.norm_layer = define_norm(self.clstm_hidden[-1],norm_type)
 		self.classifier = nn.Sequential(
@@ -137,11 +139,11 @@ class BaseNet(nn.Module):
 
 		if self.dimMode == 2 : 
 			for ii, w in enumerate(x):
-				w = self.primaryConv2D(w)
+				w = self.primaryConv2D(w.to(self.device))
 				img.append(w)
 			img = torch.stack(img, 1)    # stacked img: 5D tensor => B x T x C x H x W
 		elif self.dimMode == 3 :
-			img = torch.stack(x,2) 		 # stacked img: 5D tensor => B x C x T x H x W
+			img = torch.stack(x,2).to(self.device) # stacked img: 5D tensor => B x C x T x H x W
 			img = self.primaryConv3D(img)
 			img = torch.transpose(img,2,1)  # Transpose B x C x T x H x W --> B x T x C x H x W
 		

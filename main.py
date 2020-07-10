@@ -33,7 +33,7 @@ def train_net(device):
 	tot_batch = len(train_loader)
 	print('There are {} batcheds'.format(tot_batch))
 
-	net = BaseNet(in_channels=3, n_classes=5, dimMode=3)
+	net = BaseNet(in_channels=3, n_classes=5, dimMode=3, device=device)
 	net = net.to(device)
 
 	criterion = nn.CrossEntropyLoss().to(device)
@@ -70,7 +70,7 @@ def train_net(device):
 		# train on batches of data, assumes you already have train_loader
 		for batch_i, data in enumerate(train_loader):
 			images = data['images']
-			label_id = data['label_id']
+			label_id = data['label_id'].to(device)
 
 			# get output label_ids from the network
 			output_ids = net(images)
