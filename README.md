@@ -8,7 +8,7 @@ The repository is largely on production
 
 ## Model structures 
 - Default structure:
-![default_structure](/images/model_default_structure.JPG)
+![default_structure](/images/model_structure.png)
 
 ### External resources
 - ConvLSTM implementation was borrowed from SreenivasVRao https://github.com/SreenivasVRao/ConvGRU-ConvLSTM-PyTorch
