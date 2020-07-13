@@ -2,6 +2,8 @@
 from data_loader import *
 from models      import *
 
+from math import floor, ceil
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,11 +24,15 @@ def train_net(device):
 		                                    label_file='./data/jester-v1-labels.csv', 
 		                                    labels=labels, 
 		                                    transform=data_transform)
+	# Split train/test/validatition set (train:70%, val:10%, test:20%)
+	n_dataset = len(transformed_dataset)
+	train_set, val_set, test_set = torch.utils.data.random_split(transformed_dataset,(n_dataset-(floor(n_dataset*0.2)+floor(n_dataset*0.1)),floor(n_dataset*0.1),floor(n_dataset*0.2)))
+	
 	# load train data in batches
 	batch_size   = 20
 	n_epochs = 15
 	lr = 1e-4
-	train_loader = DataLoader(transformed_dataset, 
+	train_loader = DataLoader(train_set, 
 	                          batch_size=batch_size,
 	                          shuffle=True, 
 	                          num_workers=4)
