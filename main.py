@@ -96,7 +96,7 @@ def train_net(device):
 
 			# calculate the accuracy
 			running_loss += loss.item()
-			pc           += sum(output_ids.to('cpu').detach().numpy().max(axis=1)==label_id.to('cpu').detach().numpy())/len(label_id)
+			pc           += sum(output_ids.to('cpu').detach().numpy().argmax(axis=1)==label_id.to('cpu').detach().numpy())/len(label_id)
 			
 			# print loss statistics every 10 batches
 			if batch_i%10 == 0:
