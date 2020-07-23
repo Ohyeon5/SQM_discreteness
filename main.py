@@ -30,14 +30,14 @@ def train_net(device):
 	
 	# load train data in batches
 	batch_size   = 20
-	n_epochs = 15
+	n_epochs = 2000
 	lr = 1e-4
 	train_loader = DataLoader(train_set, 
 	                          batch_size=batch_size,
 	                          shuffle=True, 
 	                          num_workers=4)
 	tot_batch = len(train_loader)
-	print('There are {} batcheds'.format(tot_batch))
+	print('There are {} batches'.format(tot_batch))
 
 	net = BaseNet(in_channels=3, n_classes=5, dimMode=3, device=device)
 	net = net.to(device)
@@ -72,6 +72,7 @@ def train_net(device):
 	for epoch in range(epoch_start,n_epochs):  # loop over the dataset multiple times
 
 		running_loss = 0.0
+		pc = 0.0
 
 		# train on batches of data, assumes you already have train_loader
 		for batch_i, data in enumerate(train_loader):
@@ -93,13 +94,17 @@ def train_net(device):
 			# update the weights
 			optimizer.step()
 
+			# calculate the accuracy
+			running_loss += loss.item()
+			pc           += sum(output_ids.to('cpu').detach().numpy().max(axis=1)==label_id.to('cpu').detach().numpy())/len(label_id)
+			
 			# print loss statistics every 10 batches
 			if batch_i%10 == 0:
-				running_loss += loss.item()
-				print('Epoch: {}, Batch: {}, Avg. Loss: {}'.format(epoch + 1, batch_i+1, running_loss/10))
+				print('Epoch: {}, Batch: {}, Avg. Loss: {}, Avg. pc: {}'.format(epoch + 1, batch_i+1, running_loss/10, pc/10))
 				lossLogger[epoch*(tot_batch//10) + batch_i//10] = running_loss/10
 				running_loss = 0.0
-
+				pc = 0.0
+				
 		state = {'state_dict': net.state_dict(),
 				 'optimizer' : optimizer.state_dict(),
 				 'n_epoch': epoch, 
@@ -118,7 +123,8 @@ def train_net(device):
 
 # main run function 
 if __name__ == '__main__':
-	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+	use_gpu=0
+	device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 	print('Running with '+str(device)+'...')
 
 	train_net(device)
