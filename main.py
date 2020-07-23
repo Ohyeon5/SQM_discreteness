@@ -104,7 +104,7 @@ def train_net(device):
 				lossLogger[epoch*(tot_batch//10) + batch_i//10] = running_loss/10
 				running_loss = 0.0
 				pc = 0.0
-				
+
 		state = {'state_dict': net.state_dict(),
 				 'optimizer' : optimizer.state_dict(),
 				 'n_epoch': epoch, 
@@ -123,7 +123,7 @@ def train_net(device):
 
 # main run function 
 if __name__ == '__main__':
-	use_gpu=0
+	use_gpu=1
 	device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 	print('Running with '+str(device)+'...')
 
