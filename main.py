@@ -119,7 +119,7 @@ def train_net(device):
 				 'lossLogger': lossLogger}
 		torch.save(state, this_model_path)
 
-		# validate the network
+		# validate every 5 epochs
 		if epoch%5 == 4:
 			with torch.no_grad():
 				val_loss = 0.0
@@ -129,8 +129,8 @@ def train_net(device):
 					val_img   = val['images']
 					val_labid = val['label_id'].to(device)
 					val_out   = net(val_img)
-					val_bl    = criterion(val_out, val_labid)
-					val_loss += val_bl
+					val_bloss = criterion(val_out, val_labid)
+					val_loss += val_bloss.item()
 					val_pc   += sum(val_out.to('cpu').detach().numpy().argmax(axis=1)==val_labid.to('cpu').detach().numpy())/len(val_labid)
 
 				print('\nEpoch: {}, Validation Avg. Loss: {}, Avg. pc: {}'.
