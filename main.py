@@ -30,9 +30,17 @@ def train_net(device):
 	
 	# load train data in batches
 	batch_size   = 20
-	n_epochs = 2000
+	n_epochs = 300
 	lr = 1e-4
 	train_loader = DataLoader(train_set, 
+	                          batch_size=batch_size,
+	                          shuffle=True, 
+	                          num_workers=4)
+	val_loader   = DataLoader(val_set, 
+	                          batch_size=batch_size,
+	                          shuffle=True, 
+	                          num_workers=4)
+	test_loader  = DataLoader(test_set, 
 	                          batch_size=batch_size,
 	                          shuffle=True, 
 	                          num_workers=4)
@@ -111,13 +119,30 @@ def train_net(device):
 				 'lossLogger': lossLogger}
 		torch.save(state, this_model_path)
 
+		# validate the network
+		if epoch%5 == 4:
+			with torch.no_grad():
+				val_loss = 0.0
+				val_pc   = 0.0
+				for b, val in enumerate(val_loader):
+					net.eval()
+					val_img   = val['images']
+					val_labid = val['label_id'].to(device)
+					val_out   = net(val_img)
+					val_bl    = criterion(val_out, val_labid)
+					val_loss += val_bl
+					val_pc   += sum(val_out.to('cpu').detach().numpy().argmax(axis=1)==val_labid.to('cpu').detach().numpy())/len(val_labid)
+
+				print('\nEpoch: {}, Validation Avg. Loss: {}, Avg. pc: {}'.
+			      format(epoch + 1, val_loss/val_loader.__len__(), val_pc/val_loader.__len__()))
+
+
 	print('Finished Training')
 	plt.figure()
 	plt.plot(lossLogger,label=this_model_path[:-3])
 	plt.ylim([0,0.4])
 	plt.legend(loc='upper right')
 	plt.savefig(this_model_path[:-3]+'.png')
-
 
 
 
