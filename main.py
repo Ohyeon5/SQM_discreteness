@@ -79,6 +79,8 @@ def train_net(device):
 
 	for epoch in range(epoch_start,n_epochs):  # loop over the dataset multiple times
 
+		net.train()
+		
 		running_loss = 0.0
 		pc = 0.0
 
