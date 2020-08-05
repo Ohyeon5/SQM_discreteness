@@ -1,6 +1,7 @@
 # RUN code
 from data_loader import *
 from models      import *
+from utils 	     import *
 
 from math import floor, ceil
 
@@ -146,12 +147,15 @@ def train_net(device):
 	plt.legend(loc='upper right')
 	plt.savefig(this_model_path[:-3]+'.png')
 
-
-
 # main run function 
 if __name__ == '__main__':
+
+	# parse configuration
+	param = get_configs()
+
+	# device 
 	use_gpu=1
 	device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 	print('Running with '+str(device)+'...')
 
-	train_net(device)
+	train_net(device, param)
