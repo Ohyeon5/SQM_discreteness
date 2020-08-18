@@ -16,30 +16,47 @@ def resize_images(image_list, im_size):
     return return_list
 
 
-def create_image_label_list(file_direc, group, im_size, skip, all_labels):
+def create_image_label_list(file_direc, group, im_size, skip, all_labels, window, i=-1):
     label = all_labels['label'].loc[int(group)]
     image_list = os.listdir(file_direc + '/' + group)
-    if len(image_list) < 22:
+    if len(image_list) < 24:
         return [], []
-    image_list = image_list[:22:skip]
+    image_list = image_list[:24:skip]
+    if i != -1:
+        image_list = image_list[i*window:(i+1)*window]
     images = resize_images([file_direc + '/' + group + '/' + i for i in image_list], im_size)
     return images, label
 
 
-def make_hdf5(file_direc, im_size, skip, all_labels, desired_labels):
+def make_hdf5(file_direc, im_size, skip, window, all_labels, desired_labels, discrete):
     indices = list(all_labels[all_labels['label'].isin(desired_labels)].index)
-    hf = h5py.File('/Volumes/MAXTOR/data/data2.h5', 'w')
-    for group in tqdm(indices):
-        group = str(group)
-        images, label = create_image_label_list(file_direc, group, im_size, skip, all_labels)
-        if not images:
-            print(group)
-            continue
-        hfgroup = hf.create_group(group)
-        hfgroup.create_dataset('images', data=images)
-        hfgroup.create_dataset('label', data=label)
+    if discrete:
+        for i in range(int(24/(skip*window))):
+            hf = h5py.File('/Volumes/MAXTOR/data/discrete/data_disc_' + str(i) + '.h5', 'w')
+            for group in tqdm(indices):
+                group = str(group)
+                images, label = create_image_label_list(file_direc, group, im_size, skip, all_labels, window, i)
+                if not images:
+                    print(group)
+                    continue
+                hfgroup = hf.create_group(group)
+                hfgroup.create_dataset('images', data=images)
+                hfgroup.create_dataset('label', data=label)
 
-    hf.close()
+            hf.close()
+    else:
+        hf = h5py.File('/Volumes/MAXTOR/data/data.h5', 'w')
+        for group in tqdm(indices):
+            group = str(group)
+            images, label = create_image_label_list(file_direc, group, im_size, skip, all_labels, window, i)
+            if not images:
+                print(group)
+                continue
+            hfgroup = hf.create_group(group)
+            hfgroup.create_dataset('images', data=images)
+            hfgroup.create_dataset('label', data=label)
+
+        hf.close()
 
 
 if __name__ == "__main__":
@@ -48,5 +65,5 @@ if __name__ == "__main__":
     val_labels = pd.read_csv("/Volumes/MAXTOR/data/jester-v1-validation.csv", names=['label'], sep=';')
     all_labels = val_labels.append(train_labels)
     all_labels = all_labels.sort_index()
-    labels = ['Swiping Left', 'Swiping Right', 'Swiping Up', 'Swiping Down']
-    make_hdf5(file_direc, im_size=50, skip=2, all_labels=all_labels, desired_labels=labels)
+    labels = ['Swiping Left', 'Swiping Right']
+    make_hdf5(file_direc, im_size=50, skip=2, window=3, all_labels=all_labels, desired_labels=labels, discrete=True)

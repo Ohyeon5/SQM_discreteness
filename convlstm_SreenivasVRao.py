@@ -24,7 +24,7 @@ class ConvLSTMCell(nn.Module):
         super(ConvLSTMCell, self).__init__()
 
         self.device = device
-        self.input_dim  = in_channels
+        self.input_dim = in_channels
         self.hidden_dim = hidden_channels
 
         self.kernel_size = kernel_size
@@ -74,7 +74,7 @@ class ConvLSTM(nn.Module):
         if not len(kernel_size) == len(hidden_channels) == num_layers:
             raise ValueError('Inconsistent list length.')
 
-        self.input_dim  = in_channels
+        self.input_dim = in_channels
         self.hidden_dim = hidden_channels
         self.kernel_size = kernel_size
         self.num_layers = num_layers

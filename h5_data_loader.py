@@ -25,15 +25,15 @@ class HDF5Dataset(data.Dataset):
 
         # Search for all h5 files
         p = Path(file_path)
-        assert (p.is_dir())
-        files = sorted(p.glob('*.h5'))
-        if len(files) < 1:
-            raise RuntimeError('No hdf5 datasets found')
+        assert (p.is_file())
+        # files = sorted(p.glob('*.h5'))
+        # if len(files) < 1:
+        #     raise RuntimeError('No hdf5 datasets found')
+        #
+        # print(files)
 
-        print(files)
-
-        for h5dataset_fp in files:
-            self._add_data_infos(str(h5dataset_fp.resolve()), load_data)
+        # for h5dataset_fp in files:
+        self._add_data_infos(str(p.resolve()), load_data)
 
     def __getitem__(self, index):
         # get data
