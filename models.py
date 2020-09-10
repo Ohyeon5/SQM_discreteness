@@ -92,7 +92,7 @@ class BaseNet(nn.Module):
 
     def __init__(self, in_channels, n_classes, n_convBlocks=2, norm_type='bn',
                  conv_n_feats=[3, 32, 64], clstm_hidden=[128, 256], fc_n_hidden=None,
-                 return_all_layers=False, dimMode=2, device='cpu', discrete=False):
+                 return_all_layers=False, dimMode=2, device='cpu', discrete=False, disc=-1):
         super(BaseNet, self).__init__()
 
         # initial parameter settings
@@ -105,6 +105,7 @@ class BaseNet(nn.Module):
             self.fc_n_hidden = fc_n_hidden
         self.dimMode = dimMode
         self.discrete = discrete
+        self.disc = disc
 
         # primary convolution blocks for preprocessing and feature extraction
         layers = []
@@ -134,6 +135,23 @@ class BaseNet(nn.Module):
                                  num_layers=2, batch_first=True,
                                  bias=True, return_all_layers=return_all_layers, device=self.device)
 
+        self.convlstm3 = ConvLSTM(in_channels=self.conv_n_feats[n_convBlocks],
+                                 hidden_channels=self.clstm_hidden, kernel_size=(3, 3),
+                                 num_layers=2, batch_first=True,
+                                 bias=True, return_all_layers=return_all_layers, device=self.device)
+
+        self.convlstm4 = ConvLSTM(in_channels=self.conv_n_feats[n_convBlocks],
+                                 hidden_channels=self.clstm_hidden, kernel_size=(3, 3),
+                                 num_layers=2, batch_first=True,
+                                 bias=True, return_all_layers=return_all_layers, device=self.device)
+
+        self.convlstm5 = ConvLSTM(in_channels=self.conv_n_feats[n_convBlocks],
+                                 hidden_channels=self.clstm_hidden, kernel_size=(3, 3),
+                                 num_layers=2, batch_first=True,
+                                 bias=True, return_all_layers=return_all_layers, device=self.device)
+
+        self.average2 = nn.AvgPool3d(kernel_size=(4, 1, 1), padding=0, stride=(4, 1, 1))
+
         self.avgpool = nn.AdaptiveAvgPool2d((2, 2))
         self.norm_layer = define_norm(self.clstm_hidden[-1], norm_type)
         self.classifier = nn.Sequential(
@@ -162,15 +180,23 @@ class BaseNet(nn.Module):
         img, _ = self.convlstm(img)  # img: 5D tensor => B x T x Filters x H x W
 
         if self.discrete:
-            window_len = 3
-            window1 = torch.mean(img[-1][:, :window_len, :, :, :], dim=1, keepdim=True)
-            for i in range(window_len, img[-1].size()[1], window_len):
-                window = torch.mean(img[-1][:, i:i + window_len, :, :, :], dim=1, keepdim=True)
-                window1 = torch.cat((window1, window), 1)
+            if self.disc == 1:
+                window_len = 3
+                window1 = torch.mean(img[-1][:, :window_len, :, :, :], dim=1, keepdim=True)
+                for i in range(window_len, img[-1].size()[1], window_len):
+                    window = torch.mean(img[-1][:, i:i + window_len, :, :, :], dim=1, keepdim=True)
+                    window1 = torch.cat((window1, window), 1)
 
-            averaged = self.average(window1)
+                averaged = self.average(window1)
+                img, _ = self.convlstm2(averaged)
 
-            img, _ = self.convlstm2(averaged)
+            elif self.disc == 2:
+                img, _ = self.convlstm2(img)
+                img, _ = self.convlstm3(img)
+                img, _ = self.convlstm4(img)
+
+                averaged = self.average2(img)
+                img, _ = self.convlstm5(averaged)
 
         # Base Network: use the last layer only
         img = img[-1][:, -1, :, :, :].squeeze()

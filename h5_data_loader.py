@@ -2,6 +2,7 @@ import h5py
 from pathlib import Path
 import torch
 from torch.utils import data
+from scipy.ndimage import gaussian_filter
 
 
 class HDF5Dataset(data.Dataset):
@@ -16,12 +17,13 @@ class HDF5Dataset(data.Dataset):
         transform: PyTorch transform to apply to every data instance (default=None).
     """
 
-    def __init__(self, file_path, load_data=False, data_cache_size=3, transform=None):
+    def __init__(self, file_path, s, load_data=False, data_cache_size=3, transform=None):
         super().__init__()
         self.data_info = []
         self.data_cache = {}
         self.data_cache_size = data_cache_size
         self.transform = transform
+        self.spatial = s
 
         # Search for all h5 files
         p = Path(file_path)
@@ -41,6 +43,9 @@ class HDF5Dataset(data.Dataset):
         images = []
 
         for ii, image in enumerate(x):
+            # spatial
+            image = gaussian_filter(image, sigma=self.spatial)
+
             # normalise
             image = image / 255.0
 
@@ -54,11 +59,6 @@ class HDF5Dataset(data.Dataset):
             # torch image: C X H X W
             image = image.transpose((2, 0, 1))
             images.append(torch.from_numpy(image).float())
-
-        # if self.transform:
-        #     x = self.transform(x)
-        # else:
-        #     x = torch.from_numpy(x)
 
         # get label
         y = self.get_data("label", index)

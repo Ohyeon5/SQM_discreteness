@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 
-def load_in_data(batch_size, disc1=False):
+def load_in_data(batch_size, spatial, disc1=False):
     labels_dict = pd.read_csv("../data/jester-v1-labels.csv", names=['label'], sep=';')
     labels_dict['label_id'] = labels_dict.index
     labels_dict.set_index('label', inplace=True)
@@ -16,7 +16,7 @@ def load_in_data(batch_size, disc1=False):
 
     if disc1:
         files = Path("../data/discrete").glob("*.h5")
-        datasets = [HDF5Dataset(file, load_data=False, data_cache_size=4, transform=None) for file in files]
+        datasets = [HDF5Dataset(file, load_data=False, data_cache_size=4, transform=None, s=spatial) for file in files]
         train_loaders = []
         val_loaders = []
         for dataset in datasets:
@@ -29,10 +29,10 @@ def load_in_data(batch_size, disc1=False):
         return labels_dict, val_loaders, train_loaders
 
     else:
-        dataset = HDF5Dataset('../data/data.h5', load_data=False, data_cache_size=4, transform=None)
+        dataset = HDF5Dataset('../data/data.h5', load_data=False, data_cache_size=4, transform=None, s=spatial)
         n_dataset = len(dataset)
-        train_set, val_set = torch.utils.data.random_split(dataset, (
-            n_dataset - (floor(n_dataset * 0.2)), floor(n_dataset * 0.2)))
+        train_set = torch.utils.data.Subset(dataset, np.arange(n_dataset - (floor(n_dataset * 0.2))))
+        val_set = torch.utils.data.Subset(dataset, np.arange(n_dataset - (floor(n_dataset * 0.2)), n_dataset))
 
         train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True)
         val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True)
@@ -49,21 +49,35 @@ def get_n_classes(train, val, labels):
     return n_classes
 
 
-def plot_graphs(valLossLogger, valAccLogger, lossLogger, accLogger, this_model_path, index=-1):
-    lossMask = np.isfinite(valLossLogger)
-    accMask = np.isfinite(valAccLogger)
-    x = np.arange(len(lossLogger) - 1)
+def plot_graphs(valLossLogger, valAccLogger, lossLogger, accLogger, disc, spatial, temporal, model_path):
+
+    networks = ['cont', 'disc1', 'disc2', 'disc3']
+    max_t = np.round(np.nanmax(accLogger), 2)
+    max_v = np.round(np.nanmax(valAccLogger), 2)
+    name = model_path + networks[disc] + '_spatial-' + str(spatial) + '_temporal-' + str(temporal) + '_t-' + str(max_t) + '_v-' + str(max_v)
+    print(name)
+
+    if len(valAccLogger) != 0:
+        lossMask = np.isfinite(valLossLogger)
+        accMask = np.isfinite(valAccLogger)
+        x = np.arange(len(lossLogger)-1)
+        y = np.arange(len(accLogger)-1)
+
     fig, axs = plt.subplots(nrows=1, ncols=2)
+
     axs[0].plot(lossLogger, label="Training")
-    axs[0].plot(x[lossMask], np.asarray(valLossLogger)[lossMask], label="Validation")
+    if len(valAccLogger) != 0:
+        axs[0].plot(x[lossMask], np.asarray(valLossLogger)[lossMask], label="Validation")
     axs[0].legend(loc='best')
+    axs[0].set_title('Loss')
     axs[1].plot(accLogger, label="Training")
-    axs[1].plot(x[accMask], np.asarray(valAccLogger)[accMask], label="Validation")
+    if len(valAccLogger) != 0:
+        axs[1].plot(y[accMask], np.asarray(valAccLogger)[accMask], label="Validation")
     axs[1].legend(loc='best')
-    if index != -1:
-        plt.savefig(this_model_path[:-3] + '.png', bbox_inches='tight')
-    else:
-        plt.savefig(this_model_path[:-3] + str(index) + '.png', bbox_inches='tight')
+    axs[1].set_title('Accuracy')
+    fig.suptitle(name)
+
+    plt.savefig(name + '.png', bbox_inches='tight')
 
 
 def check_model_saved(net, optimizer, n_epochs, tot_batch, epoch_start, lossLogger):
@@ -72,20 +86,20 @@ def check_model_saved(net, optimizer, n_epochs, tot_batch, epoch_start, lossLogg
         os.makedirs(model_path)
     this_model_path = model_path + 'baseNet.pt'
     #
-    if os.path.exists(this_model_path):
-        print('=> Loading checkpoint' + this_model_path)
-        checkpoint = torch.load(this_model_path)
-        net.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        epoch_start = checkpoint['n_epoch']
-        if 'lossLogger' in checkpoint.keys():
-            lossLogger = checkpoint['lossLogger']
-            if len(lossLogger) < n_epochs * (tot_batch // 10) + 1:
-                temp = lossLogger
-                lossLogger = np.zeros(n_epochs * (tot_batch // 10) + 1)
-                lossLogger[:len(temp)] = temp
+    # if os.path.exists(this_model_path):
+    #     print('=> Loading checkpoint' + this_model_path)
+    #     checkpoint = torch.load(this_model_path)
+    #     net.load_state_dict(checkpoint['state_dict'])
+    #     optimizer.load_state_dict(checkpoint['optimizer'])
+    #     epoch_start = checkpoint['n_epoch']
+    #     if 'lossLogger' in checkpoint.keys():
+    #         lossLogger = checkpoint['lossLogger']
+    #         if len(lossLogger) < n_epochs * (tot_batch // 10) + 1:
+    #             temp = lossLogger
+    #             lossLogger = np.zeros(n_epochs * (tot_batch // 10) + 1)
+    #             lossLogger[:len(temp)] = temp
 
-    return lossLogger, epoch_start, this_model_path, net
+    return lossLogger, epoch_start, model_path, net
 
 
 def validate(device, dataset, labels_dict, criterion, net):
