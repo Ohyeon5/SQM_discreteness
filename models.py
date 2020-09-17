@@ -122,6 +122,7 @@ class BaseNet(nn.Module):
 			                       hidden_channels=self.clstm_hidden, kernel_size=(3,3),
 								   num_layers=2, batch_first=True, 
 								   bias=True, return_all_layers=return_all_layers, device=self.device)
+		
 		self.avgpool    = nn.AdaptiveAvgPool2d((2, 2))
 		self.norm_layer = define_norm(self.clstm_hidden[-1],norm_type)
 		self.classifier = nn.Sequential(
