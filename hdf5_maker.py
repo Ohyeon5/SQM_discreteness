@@ -56,9 +56,10 @@ if __name__ == "__main__":
     val_labels   = pd.read_csv(param['csv_val'], names=['label'], sep=';')
 
     labels       = param['labels']
+    fn_postfix   = 'all' if len(labels)==1 or labels is 'all' else str(len(labels))
 
-    train_fn     = data_path + os.sep + 'train_hdf5.h5'
-    val_fn       = data_path + os.sep + 'val_hdf5.h5'
+    train_fn     = data_path + os.sep + 'train_hdf5' + fn_postfix + '.h5'
+    val_fn       = data_path + os.sep + 'val_hdf5'   + fn_postfix + '.h5'
 
     make_hdf5(img_path, im_size=50, skip=2, all_labels=train_labels, desired_labels=labels, fname=train_fn)
     make_hdf5(img_path, im_size=50, skip=2, all_labels=val_labels,   desired_labels=labels, fname=val_fn)
