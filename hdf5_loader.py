@@ -1,7 +1,10 @@
-import h5py
+import h5py, sys
 from pathlib import Path
-
 from scipy.ndimage import gaussian_filter
+from math import ceil, sqrt
+
+import matplotlib.pyplot as plt
+
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -168,13 +171,13 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_dataset, 
                               batch_size=batch_size,
                               shuffle=True, 
-                              num_workers=4)
+                              num_workers=2)
     val_loader   = DataLoader(val_dataset, 
                               batch_size=batch_size,
                               shuffle=True, 
-                              num_workers=4)
+                              num_workers=2)
 
-    for ii,sample in enumerate(train_loader):
+    for jj,sample in enumerate(train_loader):
         images   = sample['images']
         label    = sample['label']
         label_id = sample['label_id']
@@ -187,5 +190,5 @@ if __name__ == '__main__':
             plt.imshow(img_plot)
             plt.axis('off')
         plt.suptitle('Label: {}, label id: {}, total: {} images'.format(label[0], label_id.to('cpu').numpy()[0],len(images)))
-
-        plt.show()
+        fignm = './examples/example' + str(jj) + '.png'
+        plt.savefig('./example.png')
