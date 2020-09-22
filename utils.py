@@ -39,7 +39,3 @@ def get_configs():
 	param['test']   = config.getboolean('Mode','test')
 
 	return param
-
-if __name__ == '__main__':
-
-	# test the util functions here
