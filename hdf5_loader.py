@@ -159,6 +159,8 @@ if __name__ == '__main__':
     train_dataset = HDF5Dataset(file_path =param['data_path']+'train_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
     val_dataset   = HDF5Dataset(file_path =param['data_path']+'val_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
 
+    print(len(train_dataset))
+
     # load train data in batches
     batch_size   = 20
     n_epochs = 300
