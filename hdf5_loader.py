@@ -1,11 +1,14 @@
 import h5py
 from pathlib import Path
-import torch
-from torch.utils import data
+
 from scipy.ndimage import gaussian_filter
 
+import torch
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
 
-class HDF5Dataset(data.Dataset):
+
+class HDF5Dataset(Dataset):
     """Represents an abstract HDF5 dataset.
     Input params:
         file_path: Path to the folder containing the dataset (one or multiple HDF5 files).
@@ -141,3 +144,45 @@ class HDF5Dataset(data.Dataset):
         # get new cache_idx assigned by _load_data_info
         cache_idx = self.get_data_infos(type)[i]['cache_idx']
         return self.data_cache[fp][cache_idx]
+
+
+# plot hdf5_loader examples
+
+if __name__ == '__main__':
+
+    # example plots
+
+    # parse configuration
+    param = get_configs()
+    
+    train_dataset = HDF5Dataset(file_path =param['data_path']+'train_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
+    val_dataset   = HDF5Dataset(file_path =param['data_path']+'val_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
+
+    # load train data in batches
+    batch_size   = 20
+    n_epochs = 300
+    lr = 1e-4
+    train_loader = DataLoader(train_dataset, 
+                              batch_size=batch_size,
+                              shuffle=True, 
+                              num_workers=4)
+    val_loader   = DataLoader(val_dataset, 
+                              batch_size=batch_size,
+                              shuffle=True, 
+                              num_workers=4)
+
+    for ii,sample in enumerate(train_loader):
+        images   = sample['images']
+        label    = sample['label']
+        label_id = sample['label_id']
+        r,c = ceil(sqrt(len(images))), ceil(len(images)/ceil(sqrt(len(images))))
+        plt.figure()
+        for ii,img in enumerate(images):
+            print(img.to('cpu').numpy().shape)
+            img_plot = img.to('cpu').numpy()[0].squeeze().transpose(1,2,0)
+            plt.subplot(r,c,ii+1)
+            plt.imshow(img_plot)
+            plt.axis('off')
+        plt.suptitle('Label: {}, label id: {}, total: {} images'.format(label[0], label_id.to('cpu').numpy()[0],len(images)))
+
+        plt.show()
