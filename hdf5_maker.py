@@ -32,7 +32,6 @@ def make_hdf5(img_path, im_size, skip, all_labels, desired_labels, fname='data_h
     indices = list(all_labels[all_labels['label'].isin(desired_labels)].index)
     hf = h5py.File(fname, 'w')
     for group in tqdm(indices):
-        group = indices[0]
         group = str(group)
         images, label = create_image_label_list(img_path, group, im_size, skip, all_labels)
         if not images:
