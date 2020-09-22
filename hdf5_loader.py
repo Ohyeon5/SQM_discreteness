@@ -153,8 +153,9 @@ if __name__ == '__main__':
     # example plots
 
     # parse configuration
+    from utils import *
     param = get_configs()
-    
+
     train_dataset = HDF5Dataset(file_path =param['data_path']+'train_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
     val_dataset   = HDF5Dataset(file_path =param['data_path']+'val_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
 
