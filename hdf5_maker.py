@@ -37,8 +37,8 @@ def make_hdf5(img_path, im_size, skip, all_labels, desired_labels, fname='data_h
         if not images:
             print('{} excluded, because of the short length'.format(group))
             continue
-        print(label, label_id)
-        label_id = desired_labels.index(label)        
+        label_id = desired_labels.index(label)    
+        print(label, label_id)    
         hfgroup = hf.create_group(group)
         hfgroup.create_dataset('images', data=images)
         hfgroup.create_dataset('label', data=label)
