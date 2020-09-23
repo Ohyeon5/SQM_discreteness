@@ -63,12 +63,14 @@ class HDF5Dataset(Dataset):
 
         ########## changes needed!!!!! #################
 
+        label    = self.get_data("label", index)
+        label_id = self.get_data("label", index)
+        sample   = {'images': images, 'label': label, 'label_id': label_id}
+        
         if self.transform:
             sample = self.transform(sample)
 
-        # get label
-        y = self.get_data("label", index)
-        return images, y
+        return sample
 
     def __len__(self):
         return len(self.get_data_infos('images'))
@@ -149,6 +151,53 @@ class HDF5Dataset(Dataset):
         return self.data_cache[fp][cache_idx]
 
 
+#######################
+#   Transformations   #
+#######################
+
+class Normalize(object):
+    """Convert a color image to grayscale and normalize the color range to [0,1].
+       If spatial is not None, apply spatial gaussian blur"""        
+
+    def __call__(self, sample, spatial=None):
+        images, label, label_id = sample['images'], sample['label'], sample['label_id']
+
+        for ii, image in enumerate(images):
+            image_copy = np.copy(image)
+
+            # Spatial blurring
+            if spatial is not None:
+                image_copy = gaussian_filter(image_copy, sigma=spatial)
+
+            # scale color range from [0, 255] to [0, 1]
+            image_copy=  image_copy/255.0   
+            images[ii] = image_copy     
+
+        return {'images': images, 'label':label,  'label_id': label_id}
+
+class ToTensor(object):
+    """Convert ndarrays in sample to Tensors."""
+
+    def __call__(self, sample):
+        images, label, label_id = sample['images'], sample['label'], sample['label_id']
+
+        for ii, image in enumerate(images):
+            # if image has no grayscale color channel, add one
+            if(len(image.shape) == 2):
+                # add that third color dim
+                image = image.reshape(image.shape[0], image.shape[1], 1)
+
+            # swap color axis because
+            # numpy image: H x W x C
+            # torch image: C X H X W
+            image = image.transpose((2, 0, 1))
+            images[ii] = torch.from_numpy(image).float()
+        
+        return {'images': images, 'label': label,
+                'label_id': torch.from_numpy(np.array(label_id))}
+
+
+
 # plot hdf5_loader examples
 
 if __name__ == '__main__':
@@ -159,8 +208,10 @@ if __name__ == '__main__':
     from utils import *
     param = get_configs()
 
-    train_dataset = HDF5Dataset(file_path =param['data_path']+'train_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
-    val_dataset   = HDF5Dataset(file_path =param['data_path']+'val_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
+    data_transform = transforms.Compose([Normalize(), ToTensor()])
+
+    train_dataset = HDF5Dataset(file_path =param['data_path']+'train_hdf5.h5', load_data=False, data_cache_size=4, transform=data_transform)
+    val_dataset   = HDF5Dataset(file_path =param['data_path']+'val_hdf5.h5', load_data=False, data_cache_size=4, transform=data_transform)
 
     print(len(train_dataset))
 

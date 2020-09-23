@@ -13,22 +13,6 @@ import torch.nn.functional as F
 
 def train_net(device, param):
 
-	# Label subset
-	labels = ['Swiping Left','Swiping Right','Swiping up','Swiping Down','Sliding Two Fingers Left']
-
-	# # Load data and apply transforms
-	# data_transform = transforms.Compose([Normalize(),
-	# 									ToTensor()])
-
-	# # create the transformed dataset
-	# transformed_dataset = Jester20BnDataset(csv_file='./data/jester-v1-train.csv', 
-	# 	                                    img_path='./data/20bn-jester-v1/', 
-	# 	                                    label_file='./data/jester-v1-labels.csv', 
-	# 	                                    labels=labels, 
-	# 	                                    transform=data_transform)
-	# # Split train/test/validatition set (train:70%, val:10%, test:20%)
-	# n_dataset = len(transformed_dataset)
-	# train_set, val_set, test_set = torch.utils.data.random_split(transformed_dataset,(n_dataset-(floor(n_dataset*0.2)+floor(n_dataset*0.1)),floor(n_dataset*0.1),floor(n_dataset*0.2)))
 	
 	# Use hdf5 files to load the dataset
 	train_dataset = HDF5Dataset(file_path =param['data_path']+'train_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
@@ -46,7 +30,7 @@ def train_net(device, param):
 	                          batch_size=batch_size,
 	                          shuffle=True, 
 	                          num_workers=4)
-	
+
 	# get and print number of classes and batches
 	n_classes = get_n_classes(train_loader, val_loader, labels_dict)
     print('There are {} classes'.format(n_classes))

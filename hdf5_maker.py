@@ -34,12 +34,14 @@ def make_hdf5(img_path, im_size, skip, all_labels, desired_labels, fname='data_h
     for group in tqdm(indices):
         group = str(group)
         images, label = create_image_label_list(img_path, group, im_size, skip, all_labels)
+        label_id = desired_labels.index(label)
         if not images:
             print('{} excluded, because of the short length'.format(group))
             continue
         hfgroup = hf.create_group(group)
         hfgroup.create_dataset('images', data=images)
         hfgroup.create_dataset('label', data=label)
+        hfgroup.create_dataset('label_id', data=label_id)
 
     hf.close()
 
