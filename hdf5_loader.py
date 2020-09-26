@@ -194,7 +194,7 @@ class ToTensor(object):
             images[ii] = torch.from_numpy(image).float()
         
         return {'images': images, 'label': label,
-                'label_id': torch.from_numpy(np.array(label_id))}
+                'label_id': torch.from_numpy(np.array(np.int(label_id)))}
 
 
 
