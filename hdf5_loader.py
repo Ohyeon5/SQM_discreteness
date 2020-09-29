@@ -1,4 +1,5 @@
 import h5py, sys, os
+import numpy as np
 from pathlib import Path
 from scipy.ndimage import gaussian_filter
 from math import ceil, sqrt
