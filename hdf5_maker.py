@@ -34,11 +34,12 @@ def make_hdf5(img_path, im_size, skip, all_labels, desired_labels, fname='data_h
     for group in tqdm(indices):
         group = str(group)
         images, label = create_image_label_list(img_path, group, im_size, skip, all_labels)
-        print(group, len(label))
+        print(group, label, len(label))
         if not images:
             print('{} excluded, because of the short length'.format(group))
             continue
-        label_id = desired_labels.index(label)    
+        label_id = desired_labels.index(label)  
+        print(group, label, label_id, len(label))  
         hfgroup = hf.create_group(group)
         hfgroup.create_dataset('images', data=images)
         hfgroup.create_dataset('label', data=label)
@@ -62,7 +63,7 @@ if __name__ == "__main__":
     labels       = param['labels']
     fn_postfix   = str(len(labels))
 
-    print(labels, fn_postfix)
+    print('labels are {}, length of {}'.format(labels, fn_postfix))
 
     train_fn     = data_path + os.sep + 'train_hdf5' + fn_postfix + '.h5'
     val_fn       = data_path + os.sep + 'val_hdf5'   + fn_postfix + '.h5'
