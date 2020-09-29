@@ -10,11 +10,14 @@ import torch.nn.functional as F
 from convlstm_SreenivasVRao import *
 
 # Define normalization type
-def define_norm(n_channel,norm_type,n_group=None):
+def define_norm(n_channel,norm_type,n_group=None,dim_mode=2):
 	# define and use different types of normalization steps 
 	# Referred to https://pytorch.org/docs/stable/_modules/torch/nn/modules/normalization.html
 	if norm_type is 'bn':
-		return nn.BatchNorm3d(n_channel)
+		if dim_mode == 2:
+			return nn.BatchNorm2d(n_channel)
+		elif dim_mode==3:
+			return nn.BatchNorm3d(n_channel)
 	elif norm_type is 'gn':
 		if n_group is None: n_group=2 # default group num is 2
 		return nn.GroupNorm(n_group,n_channel)
@@ -44,7 +47,7 @@ class Conv3DBlock(nn.Module):
 								   stride=(1,stride,stride),padding=(1,padding,padding))
 		self.relu      = nn.ReLU(inplace=True)
 		self.maxpool   = nn.MaxPool3d(kernel_size=(1,2,2), stride=(1,2,2))		
-		self.norm_layer= define_norm(outplane,norm_type)
+		self.norm_layer= define_norm(outplane,norm_type,dim_mode=3)
 
 	def forward(self,x):
 
@@ -88,7 +91,7 @@ class BaseNet(nn.Module):
 								   bias=True, return_all_layers=return_all_layers, device=self.device)
 		
 		self.avgpool    = nn.AdaptiveAvgPool2d((2, 2))
-		self.norm_layer = define_norm(self.clstm_hidden[-1],norm_type)
+		self.norm_layer = define_norm(self.clstm_hidden[-1],norm_type,dim_mode=2)
 		self.classifier = nn.Sequential(
 			nn.Dropout(),
 			nn.Linear(2*2*self.clstm_hidden[-1], self.fc_n_hidden),
