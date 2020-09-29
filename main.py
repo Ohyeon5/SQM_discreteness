@@ -104,7 +104,6 @@ def train_net(device, param):
 		print('Epoch: {}, Avg. Loss: {}, Avg. pc: {}'.format(epoch, running_loss/(batch_i+1), pc/(batch_i+1)))
 		logger['train_loss'][epoch] = running_loss/(batch_i+1)
 		logger['train_pc'][epoch]   = pc/(batch_i+1)
-		print(logger)
 		running_loss = 0.0
 		pc = 0.0
 
@@ -137,9 +136,13 @@ def train_net(device, param):
 	print('Finished Training')
 
 	plt.figure()
-	plt.plot(logger['train_pc'],label=this_model_path[:-3])
-	plt.ylim([0,0.4])
-	plt.legend(loc='upper right')
+
+	for pi,(log_key,log_val) in enumerate(logger.items()):
+		plt.subplots(2,2,pi+1)
+		plt.plot(logger[log_key],label=log_key)
+		plt.legend(loc='upper right')
+		plt.title(log_key)
+
 	plt.savefig(this_model_path[:-3]+'.png')
 
 # main run function 
