@@ -46,6 +46,7 @@ class HDF5Dataset(Dataset):
             if len(image.shape) == 2:
                 # add that third color dim
                 image = image.reshape(image.shape[0], image.shape[1], 1)
+            images.append(image)
 
         label    = self.get_data("label", index)
         label_id = self.get_data("label_id", index)
@@ -218,7 +219,7 @@ if __name__ == '__main__':
         images   = sample['images']
         label    = sample['label']
         label_id = sample['label_id']
-        print(label, label_id)
+        print(label, label_id, len(images))
         r,c = ceil(sqrt(len(images))), ceil(len(images)/ceil(sqrt(len(images))))
         plt.figure()
         for ii,img in enumerate(images):
