@@ -64,6 +64,7 @@ class HDF5Dataset(Dataset):
             # Walk through all groups, extracting datasets
             for gname, group in h5_file.items():
                 for dname, ds in group.items():
+                    print(dname)
                     # if data is not loaded its cache index is -1
                     idx = -1
                     if load_data:
