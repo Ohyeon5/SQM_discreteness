@@ -41,7 +41,7 @@ def train_net(device, param):
 	tot_batch = len(train_loader)
 	print('There are {} batches'.format(tot_batch))
 
-	net = BaseNet(in_channels=3, n_classes=5, device=device)
+	net = BaseNet(in_channels=3, n_classes=n_classes, device=device)
 	net = net.to(device)
 
 	criterion = nn.CrossEntropyLoss().to(device)
