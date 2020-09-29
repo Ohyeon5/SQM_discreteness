@@ -49,7 +49,6 @@ class HDF5Dataset(Dataset):
 
         label    = self.get_data("label", index)
         label_id = self.get_data("label_id", index)
-        print(index, label, label_id)
         sample   = {'images': images, 'label': label, 'label_id': label_id}
         
         if self.transform:
@@ -194,9 +193,10 @@ if __name__ == '__main__':
     param = get_configs()
 
     data_transform = transforms.Compose([Normalize(), ToTensor()])
+    hdf5_params    = {'load_data': False, 'data_cache_size': 4, 'transform': data_transform}
 
-    train_dataset = HDF5Dataset(file_path =param['data_path']+'train_hdf5.h5', load_data=False, data_cache_size=4, transform=data_transform)
-    val_dataset   = HDF5Dataset(file_path =param['data_path']+'val_hdf5.h5', load_data=False, data_cache_size=4, transform=data_transform)
+    train_dataset = HDF5Dataset(file_path =param['data_path']+'train_hdf5.h5', **hdf5_params)
+    val_dataset   = HDF5Dataset(file_path =param['data_path']+'val_hdf5.h5', **hdf5_params)
 
     print(len(train_dataset))
 
@@ -204,14 +204,10 @@ if __name__ == '__main__':
     batch_size   = 20
     n_epochs = 300
     lr = 1e-4
-    train_loader = DataLoader(train_dataset, 
-                              batch_size=batch_size,
-                              shuffle=True, 
-                              num_workers=2)
-    val_loader   = DataLoader(val_dataset, 
-                              batch_size=batch_size,
-                              shuffle=True, 
-                              num_workers=2)
+    loader_params = {'batch_size': batch_size, 'shuffle': True, 'num_workers': 2}
+
+    train_loader = DataLoader(train_dataset, **loader_params)
+    val_loader   = DataLoader(val_dataset, **loader_params)
 
     for jj,sample in enumerate(train_loader):
         images   = sample['images']

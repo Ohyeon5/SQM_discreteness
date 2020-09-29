@@ -28,11 +28,13 @@ def get_configs():
 	param['model_name']  = config.get('Model','model_name')
 	param['batch_size']  = config.getint('Model','batch_size')
 	param['epochs']      = config.getint('Model','epochs')
-	param['labels']      = config.get('Model','labels').split(',') # need to implement if empty use all labels 
-
+	# Data
+	param['labels']      = config.get('Data','labels').split(',') # need to implement if empty use all labels 
 	# if param['labels'] is 'all': use all the labels from csv_labels file
 	if 'all' in param['labels']: 
 		param['labels']  =	pd.read_csv(param['csv_labels'], index_col=False).values.squeeze().tolist()
+	param['skip']        = config.getint('Data','skip')
+	param['im_size']     = config.getint('Data','im_size')
 
 	# mode
 	param['train']  = config.getboolean('Mode','train')
