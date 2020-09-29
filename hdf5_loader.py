@@ -230,4 +230,6 @@ if __name__ == '__main__':
             plt.axis('off')
         plt.suptitle('Label: {}, label id: {}, total: {} images'.format(label[0], label_id.to('cpu').numpy()[0],len(images)))
         fignm = './examples/example' + str(jj) + '.png'
-        plt.savefig('./example.png')
+        if not os.path.isdir('./example'):
+            os.makedirs('./example')
+        plt.savefig(fignm)
