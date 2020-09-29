@@ -1,10 +1,10 @@
 # RUN code
-from data_loader import *
 from hdf5_loader import *
 from models      import *
 from utils 	     import *
 
 from math import floor, ceil
+import matplotlib.pyplot as plt
 
 import os
 import torch
@@ -149,7 +149,7 @@ if __name__ == '__main__':
 
 	# device 
 	use_gpu=1
-	device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
+	device = 'cuda'
 	print(torch.cuda.is_available())
 	print('Running with '+str(device)+'...')
 
