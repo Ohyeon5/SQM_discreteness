@@ -48,6 +48,7 @@ class HDF5Dataset(Dataset):
                 image = image.reshape(image.shape[0], image.shape[1], 1)
 
         label    = self.get_data("label", index)
+        print(index, label)
         label_id = self.get_data("label_id", index)
         sample   = {'images': images, 'label': label, 'label_id': label_id}
         
