@@ -41,19 +41,21 @@ def train_net(device, param):
 	tot_batch = len(train_loader)
 	print('There are {} batches'.format(tot_batch))
 
-	net = BaseNet(in_channels=3, n_classes=5, dimMode=3, device=device)
+	net = BaseNet(in_channels=3, n_classes=5, device=device)
 	net = net.to(device)
 
 	criterion = nn.CrossEntropyLoss().to(device)
 
 	optimizer   = torch.optim.Adam(net.parameters(), lr=lr)
 	epoch_start = 0
-	lossLogger = np.zeros(n_epochs*(tot_batch//10)+1)
+	# save ckpt and loggers every epoch
+	logger      = {'train_loss': np.zeros(n_epochs), 'train_pc': np.zeros(n_epochs),
+	               'val_loss': np.zeros(n_epochs),   'val_pc': np.zeros(n_epochs)} 
 
 	model_path = './saved_models/'
 	if not os.path.exists(model_path):
 		os.makedirs(model_path)
-	this_model_path = model_path+'baseNet.pt'
+	this_model_path = model_path + param['model_name'] + '.pt'
 
 	if os.path.exists(this_model_path):
 		print('=> Loading checkpoint' + this_model_path)
@@ -61,12 +63,8 @@ def train_net(device, param):
 		net.load_state_dict(checkpoint['state_dict'])
 		optimizer.load_state_dict(checkpoint['optimizer'])
 		epoch_start = checkpoint['n_epoch']
-		if 'lossLogger' in checkpoint.keys():
-			lossLogger = checkpoint['lossLogger']
-			if len(lossLogger) < n_epochs*(tot_batch//10)+1 :
-				temp = lossLogger
-				lossLogger = np.zeros(n_epochs*(tot_batch//10)+1)
-				lossLogger[:len(temp)] = temp
+		if 'loggers' in checkpoint.keys():
+			logger = {log_key: log_val if len(logger[log_key]) >= n_epochs else np.append(log_val, np.zeros(n_epochs-len(log_val))) for log_key,log_val in checkpoint['loggers'].items()}
 
 	# train the network
 	net.train()
@@ -102,18 +100,12 @@ def train_net(device, param):
 			running_loss += loss.item()
 			pc           += sum(output_ids.to('cpu').detach().numpy().argmax(axis=1)==label_id.to('cpu').detach().numpy())/len(label_id)
 			
-			# print loss statistics every 10 batches
-			if batch_i%10 == 0:
-				print('Epoch: {}, Batch: {}, Avg. Loss: {}, Avg. pc: {}'.format(epoch + 1, batch_i+1, running_loss/10, pc/10))
-				lossLogger[epoch*(tot_batch//10) + batch_i//10] = running_loss/10
-				running_loss = 0.0
-				pc = 0.0
-
-		state = {'state_dict': net.state_dict(),
-				 'optimizer' : optimizer.state_dict(),
-				 'n_epoch': epoch, 
-				 'lossLogger': lossLogger}
-		torch.save(state, this_model_path)
+		# print loss statistics every epoch
+		print('Epoch: {}, Batch: {}, Avg. Loss: {}, Avg. pc: {}'.format(epoch, running_loss/(batch_i+1), pc/(batch_i+1)))
+		logger['train_loss'][epoch] = running_loss/(batch_i+1)
+		logger['train_pc'][epoch]   = pc/(batch_i+1)
+		running_loss = 0.0
+		pc = 0.0
 
 		# validate every 5 epochs
 		if epoch%5 == 4:
@@ -130,12 +122,20 @@ def train_net(device, param):
 					val_pc   += sum(val_out.to('cpu').detach().numpy().argmax(axis=1)==val_labid.to('cpu').detach().numpy())/len(val_labid)
 
 				print('\nEpoch: {}, Validation Avg. Loss: {}, Avg. pc: {}'.
-			      format(epoch + 1, val_loss/val_loader.__len__(), val_pc/val_loader.__len__()))
+			      format(epoch, val_loss/val_loader.__len__(), val_pc/val_loader.__len__()))
+				logger['val_loss'][epoch] = val_loss/val_loader.__len__()
+				logger['val_pc'][epoch]   = val_pc/val_loader.__len__()
+
+		state = {'state_dict': net.state_dict(),
+				 'optimizer' : optimizer.state_dict(),
+				 'n_epoch': epoch, 
+				 'loggers': {log_key: log_val for log_key, log_val in logger.items()}}
+		torch.save(state, this_model_path)
 
 
 	print('Finished Training')
 	plt.figure()
-	plt.plot(lossLogger,label=this_model_path[:-3])
+	plt.plot(logger['train_pc'],label=this_model_path[:-3])
 	plt.ylim([0,0.4])
 	plt.legend(loc='upper right')
 	plt.savefig(this_model_path[:-3]+'.png')

@@ -4,5 +4,8 @@
 /examples
 /__pycache__
 
+# local temp files
+temp.py
+
 # log files
 *.log
