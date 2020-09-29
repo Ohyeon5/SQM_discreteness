@@ -104,6 +104,7 @@ def train_net(device, param):
 		print('Epoch: {}, Batch: {}, Avg. Loss: {}, Avg. pc: {}'.format(epoch, running_loss/(batch_i+1), pc/(batch_i+1)))
 		logger['train_loss'][epoch] = running_loss/(batch_i+1)
 		logger['train_pc'][epoch]   = pc/(batch_i+1)
+		print(logger)
 		running_loss = 0.0
 		pc = 0.0
 
