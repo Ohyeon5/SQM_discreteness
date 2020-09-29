@@ -33,8 +33,7 @@ def define_norm(n_channel,norm_type,n_group=None,dimMode=2):
 # Conv3D block 
 class Conv3DBlock(nn.Module):
 	''' 
-	use conv3D than multiple Conv2D blocks (for a sake of computational burden)
-
+	use conv3D than multiple Conv2D blocks (for a sake of reducing computational burden)
 	INPUT dimension: BxCxTxHxW
 	'''
 	def __init__(self, inplane, outplane, kernel_size=3, stride=1,padding=1,norm_type=None):
@@ -160,43 +159,6 @@ class BaseNet(nn.Module):
 
 		return img
 
-
-# MODEL TESTING FUNCTIONS 
-# NOT A CORE FUNCTION
-def compare_speed(device):
-	import time
-	'''
-	Compare conv3D and conv2D speeds
-
-	- Results with the random conv function & filter is weird : takes less time when computed first
-	'''
-	n_frame = 40
-	m3 = nn.Conv3d(16, 32, (1, 3, 3), stride=(1,2,2),bias=False).to(device)
-	m2 = nn.Conv2d(16, 32, 3, stride=2,bias=False).to(device)
-	input = torch.randn(20, 16, n_frame, 50, 100).to(device)
-	conv_filter = torch.randn(32, 16, 1, 3, 3).to(device)
-	with torch.no_grad():
-		m3.weight = torch.nn.Parameter(conv_filter)
-		m2.weight = torch.nn.Parameter(conv_filter.squeeze())
-
-	# Compare speed of Conv3D v.s. Conv2D
-	output3 = m3(input)
-	
-	start2  = time.time()
-	output2=[]
-	for ii in range(n_frame):
-		out = m2(input[:,:,ii,:,:].squeeze())
-		output2.append(out)
-	output2 = torch.stack(output2, 2)
-	print('Conv 2d forward path took {}'.format(time.time()-start2))
-	output2.sum().backward()
-	print('Conv 2d + backward process took {}'.format(time.time()-start2))
-
-	start3  = time.time()
-	output3 = m3(input)
-	print('Conv 3d forward path took {}'.format(time.time()-start3))
-	output3.sum().backward()
-	print('Conv 3d + backward process took {}'.format(time.time()-start3))
 
 if __name__ == '__main__':
 	# usage example 

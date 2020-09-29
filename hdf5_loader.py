@@ -42,29 +42,13 @@ class HDF5Dataset(Dataset):
         images = []
 
         for ii, image in enumerate(x):
-
-            # Spatial blurring
-            if self.spatial is not None:
-                image = gaussian_filter(image, sigma=self.spatial)
-
-            # normalise
-            image = image / 255.0
-
             # if image has no grayscale color channel, add one
             if len(image.shape) == 2:
                 # add that third color dim
                 image = image.reshape(image.shape[0], image.shape[1], 1)
 
-            # swap color axis because
-            # numpy image: H x W x C
-            # torch image: C X H X W
-            image = image.transpose((2, 0, 1))
-            images.append(torch.from_numpy(image).float())
-
-        ########## changes needed!!!!! #################
-
         label    = self.get_data("label", index)
-        label_id = self.get_data("label", index)
+        label_id = self.get_data("label_id", index)
         sample   = {'images': images, 'label': label, 'label_id': label_id}
         
         if self.transform:
@@ -232,6 +216,7 @@ if __name__ == '__main__':
         images   = sample['images']
         label    = sample['label']
         label_id = sample['label_id']
+        print(label, label_id)
         r,c = ceil(sqrt(len(images))), ceil(len(images)/ceil(sqrt(len(images))))
         plt.figure()
         for ii,img in enumerate(images):
