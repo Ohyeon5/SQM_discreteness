@@ -208,8 +208,6 @@ if __name__ == '__main__':
 
     # load train data in batches
     batch_size   = 20
-    n_epochs = 300
-    lr = 1e-4
     loader_params = {'batch_size': batch_size, 'shuffle': True, 'num_workers': 2}
 
     train_loader = DataLoader(train_dataset, **loader_params)

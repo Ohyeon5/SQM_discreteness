@@ -10,14 +10,11 @@ import torch.nn.functional as F
 from convlstm_SreenivasVRao import *
 
 # Define normalization type
-def define_norm(n_channel,norm_type,n_group=None,dimMode=2):
+def define_norm(n_channel,norm_type,n_group=None):
 	# define and use different types of normalization steps 
 	# Referred to https://pytorch.org/docs/stable/_modules/torch/nn/modules/normalization.html
 	if norm_type is 'bn':
-		if dimMode == 2:
-			return nn.BatchNorm2d(n_channel)
-		elif dimMode == 3:
-			return nn.BatchNorm3d(n_channel)
+		return nn.BatchNorm3d(n_channel)
 	elif norm_type is 'gn':
 		if n_group is None: n_group=2 # default group num is 2
 		return nn.GroupNorm(n_group,n_channel)
@@ -47,30 +44,6 @@ class Conv3DBlock(nn.Module):
 								   stride=(1,stride,stride),padding=(1,padding,padding))
 		self.relu      = nn.ReLU(inplace=True)
 		self.maxpool   = nn.MaxPool3d(kernel_size=(1,2,2), stride=(1,2,2))		
-		self.norm_layer= define_norm(outplane,norm_type,dimMode=3)
-
-	def forward(self,x):
-
-		x = self.conv(x)
-		x = self.relu(x)
-		x = self.maxpool(x)
-		if self.norm_layer is not None:
-			x = self.norm_layer(x)
-
-		return x
-
-# conv2d block
-class Conv2DBlock(nn.Module):
-	# Conv building block 
-	def __init__(self, inplane, outplane, kernel_size=3, stride=1,padding=1,norm_type=None):
-		super(Conv2DBlock,self).__init__()
-		# parameters
-		self.norm_type = norm_type
-
-		# layers
-		self.conv      = nn.Conv2d(inplane,outplane,kernel_size=kernel_size,stride=stride,padding=padding)
-		self.relu      = nn.ReLU(inplace=True)
-		self.maxpool   = nn.MaxPool2d(kernel_size=2, stride=2)		
 		self.norm_layer= define_norm(outplane,norm_type)
 
 	def forward(self,x):
@@ -88,7 +61,7 @@ class BaseNet(nn.Module):
 
 	def __init__(self, in_channels, n_classes, n_convBlocks=2, norm_type='bn', 
 		         conv_n_feats=[3, 32, 64], clstm_hidden=[128, 256], fc_n_hidden=None,
-		         return_all_layers=False, dimMode=2, device='cpu'):
+		         return_all_layers=False, device='cpu'):
 		super(BaseNet, self).__init__()
 
 		# initial parameter settings
@@ -99,22 +72,14 @@ class BaseNet(nn.Module):
 			self.fc_n_hidden = n_classes*5
 		else: 
 			self.fc_n_hidden = fc_n_hidden
-		self.dimMode = dimMode
 
 		# primary convolution blocks for preprocessing and feature extraction
 		layers = []
-		if dimMode ==2:
-			for ii in range(n_convBlocks): 
-				block = Conv2DBlock(self.conv_n_feats[ii],self.conv_n_feats[ii+1],norm_type=norm_type)
-				layers.append(block)
+		for ii in range(n_convBlocks): 
+			block = Conv3DBlock(self.conv_n_feats[ii],self.conv_n_feats[ii+1],norm_type=norm_type)
+			layers.append(block)
 
-			self.primaryConv2D = nn.Sequential(*layers)
-		elif dimMode==3:
-			for ii in range(n_convBlocks): 
-				block = Conv3DBlock(self.conv_n_feats[ii],self.conv_n_feats[ii+1],norm_type=norm_type)
-				layers.append(block)
-
-			self.primaryConv3D = nn.Sequential(*layers)
+		self.primaryConv3D = nn.Sequential(*layers)
 
 		# Two layers of convLSTM
 		self.convlstm   = ConvLSTM(in_channels=self.conv_n_feats[n_convBlocks], 
@@ -133,19 +98,11 @@ class BaseNet(nn.Module):
 
 	def forward(self,x):
 		# arg: x is a list of images
-		# if self.dimMode = 2: pass images in the list x to primaryConv2D layer and then stack/concat them to make 5D tensor
-		# elif self.dimMode = 3: Stack to 5D layer and then pass 5d (BxCxTxHxW) to primaryConv3D and transpose it to BxTxCxHxW
-		img = []
+		# Stack to 5D layer and then pass 5d (BxCxTxHxW) to primaryConv3D and transpose it to BxTxCxHxW
 
-		if self.dimMode == 2 : 
-			for ii, w in enumerate(x):
-				w = self.primaryConv2D(w.to(self.device))
-				img.append(w)
-			img = torch.stack(img, 1)    # stacked img: 5D tensor => B x T x C x H x W
-		elif self.dimMode == 3 :
-			img = torch.stack(x,2).to(self.device) # stacked img: 5D tensor => B x C x T x H x W
-			img = self.primaryConv3D(img)
-			img = torch.transpose(img,2,1)  # Transpose B x C x T x H x W --> B x T x C x H x W
+		img = torch.stack(x,2).to(self.device) # stacked img: 5D tensor => B x C x T x H x W
+		img = self.primaryConv3D(img)
+		img = torch.transpose(img,2,1)  # Transpose B x C x T x H x W --> B x T x C x H x W
 		
 		img, _ = self.convlstm(img)  # img: 5D tensor => B x T x Filters x H x W
 

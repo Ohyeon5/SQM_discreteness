@@ -13,27 +13,31 @@ import torch.nn.functional as F
 
 def train_net(device, param):
 
-	
-	# Use hdf5 files to load the dataset
-	train_dataset = HDF5Dataset(file_path =param['data_path']+'train_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
-	val_dataset   = HDF5Dataset(file_path =param['data_path']+'val_hdf5.h5', load_data=False, data_cache_size=4, transform=None)
+	# 
+	# data transformations
+	data_transform = transforms.Compose([Normalize(), ToTensor()])
+	hdf5_params    = {'load_data': False, 'data_cache_size': 4, 'transform': data_transform}
 
-	# load train data in batches
+	labels       = param['labels']
+	fn_postfix   = str(len(labels))
+	train_fn     = param['data_path'] + os.sep + 'train_hdf5' + fn_postfix + '.h5'
+	val_fn       = param['data_path'] + os.sep + 'val_hdf5'   + fn_postfix + '.h5'
+
+	train_dataset = HDF5Dataset(file_path =train_fn, **hdf5_params)
+	val_dataset   = HDF5Dataset(file_path =val_fn, **hdf5_params)
+
+	# Load train and validation data in batches
 	batch_size   = 20
 	n_epochs = 300
 	lr = 1e-4
-	train_loader = DataLoader(train_dataset, 
-	                          batch_size=batch_size,
-	                          shuffle=True, 
-	                          num_workers=4)
-	val_loader   = DataLoader(val_dataset, 
-	                          batch_size=batch_size,
-	                          shuffle=True, 
-	                          num_workers=4)
+	loader_params = {'batch_size': batch_size, 'shuffle': True, 'num_workers': 2}
+
+	train_loader = DataLoader(train_dataset, **loader_params)
+	val_loader   = DataLoader(val_dataset, **loader_params)
 
 	# get and print number of classes and batches
-	n_classes = get_n_classes(train_loader, val_loader, labels_dict)
-    print('There are {} classes'.format(n_classes))
+	n_classes = len(labels)
+	print('There are {} classes'.format(n_classes))
 	tot_batch = len(train_loader)
 	print('There are {} batches'.format(tot_batch))
 
