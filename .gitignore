@@ -1,6 +1,7 @@
 # data files
 /data
 /saved_models
+/examples
 /__pycache__
 
 # log files
