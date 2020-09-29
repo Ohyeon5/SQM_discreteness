@@ -150,6 +150,7 @@ if __name__ == '__main__':
 	# device 
 	use_gpu=1
 	device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
+	print(torch.cuda.is_available())
 	print('Running with '+str(device)+'...')
 
 	train_net(device, param)
