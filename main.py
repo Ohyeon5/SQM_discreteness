@@ -52,7 +52,7 @@ def train_net(device, param):
 	logger      = {'train_loss': np.zeros(n_epochs), 'train_pc': np.zeros(n_epochs),
 	               'val_loss': np.zeros(n_epochs),   'val_pc': np.zeros(n_epochs)} 
 
-	model_path = './saved_models/'
+	model_path = param['model_path']
 	if not os.path.exists(model_path):
 		os.makedirs(model_path)
 	this_model_path = model_path + param['model_name'] + '.pt'
@@ -101,7 +101,7 @@ def train_net(device, param):
 			pc           += sum(output_ids.to('cpu').detach().numpy().argmax(axis=1)==label_id.to('cpu').detach().numpy())/len(label_id)
 			
 		# print loss statistics every epoch
-		print('Epoch: {}, Batch: {}, Avg. Loss: {}, Avg. pc: {}'.format(epoch, running_loss/(batch_i+1), pc/(batch_i+1)))
+		print('Epoch: {}, Avg. Loss: {}, Avg. pc: {}'.format(epoch, running_loss/(batch_i+1), pc/(batch_i+1)))
 		logger['train_loss'][epoch] = running_loss/(batch_i+1)
 		logger['train_pc'][epoch]   = pc/(batch_i+1)
 		print(logger)
@@ -135,6 +135,7 @@ def train_net(device, param):
 
 
 	print('Finished Training')
+
 	plt.figure()
 	plt.plot(logger['train_pc'],label=this_model_path[:-3])
 	plt.ylim([0,0.4])

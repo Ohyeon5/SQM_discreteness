@@ -26,6 +26,7 @@ def get_configs():
 	param['csv_test']    = param['data_path'] + config.get('Path','csv_test',  fallback='jester-v1-test.csv')
 	# model
 	param['model_name']  = config.get('Model','model_name',   fallback='test_model')
+	param['model_path']  = config.get('Model','model_path',   fallback='./saved_models/')
 	param['batch_size']  = config.getint('Model','batch_size',fallback=20)
 	param['epochs']      = config.getint('Model','epochs',    fallback=300)
 	# Data
