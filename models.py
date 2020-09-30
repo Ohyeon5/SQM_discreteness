@@ -58,18 +58,18 @@ class Net_disc_high(nn.Module):
 
 	def forward_redundant(self,x):
 		# arg: x is a list of images
-		x    = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
-		x, _ = self.primary_convlstm(x)
+		x = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		x = self.primary_convlstm(x)
 
 		# discrete step: high level - redundant - repeat the output of nth frame to have same T
 		imgs = []
 		for t in range(0, x.shape[1], self.window):
-			mm = x[:,t*self.window,:,:,:].unsqueeze(1).repeat(1,2,1,1,1)
+			mm = x[-1][:,t*self.window,:,:,:].unsqueeze(1).repeat(1,2,1,1,1)
 			imgs.append(mm)
 		img = torch.cat(imgs,1)
 		print(self.disc_type, img.shape)
 
-		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
 		# Base Network: use the last layer only
 		img = img[-1][:,-1,:,:,:].squeeze()
@@ -80,13 +80,13 @@ class Net_disc_high(nn.Module):
 	def forward_simple(self,x):
 		# arg: x is a list of images
 		x = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
-		x, _ = self.primary_convlstm(x)
+		x = self.primary_convlstm(x)
 
 		# discrete step: high level - simple - every window frame
-		img = x[:,slice(self.window-1,None,self.window),:,:,:]
+		img = x[-1][:,slice(self.window-1,None,self.window),:,:,:]
 		print(self.disc_type, img.shape)
 
-		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
 		# Base Network: use the last layer only
 		img = img[-1][:,-1,:,:,:].squeeze()
@@ -145,12 +145,12 @@ class Net_disc_low(nn.Module):
 		imgs = []
 		for t in range(0, x.shape[1], self.window):
 			ind_end = (t+1)*self.window if (t+1)*self.window<x.shape[1] else None
-			mm, _ = self.primary_convlstm(x[:,t*self.window:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
+			mm = self.primary_convlstm(x[:,t*self.window:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
 			imgs.append(mm[-1][:,-1,:,:,:].unsqueeze(1).repeat(1,self.window,1,1,1))
 		img = torch.cat(imgs,1) # stacked img: 5D tensor => B x T x C x H x W
 		print(self.disc_type, img.shape)
 
-		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
 		# Base Network: use the last layer only
 		img = img[-1][:,-1,:,:,:].squeeze()
@@ -166,12 +166,12 @@ class Net_disc_low(nn.Module):
 		imgs = []
 		for t in range(0, x.shape[1], self.window):
 			ind_end = (t+1)*self.window if (t+1)*self.window<x.shape[1] else None
-			mm, _ = self.primary_convlstm(x[:,t*self.window:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
+			mm = self.primary_convlstm(x[:,t*self.window:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
 			imgs.append(mm[-1][:,-1,:,:,:])
 		img = torch.stack(imgs,1) # stacked img: 5D tensor => B x T x C x H x W
 		print(self.disc_type, img.shape)
 		
-		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
 		# Base Network: use the last layer only
 		img = img[-1][:,-1,:,:,:].squeeze()
@@ -213,8 +213,8 @@ class Net_continuous(nn.Module):
 		# arg: x is a list of images
 
 		img = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
-		img, _ = self.primary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
-		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+		img = self.primary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+		img = self.secondary_convlstm(img[-1])  	# img: 5D tensor => B x T x Filters x H x W
 
 		# Base Network: use the last layer only
 		img = img[-1][:,-1,:,:,:].squeeze()
@@ -362,8 +362,9 @@ def define_norm(n_channel,norm_type,n_group=None,dim_mode=2):
 if __name__ == '__main__':
 	# usage example 
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+	print(device)
 
-	net = Net_continuous(in_channels=3, n_classes=5)
+	net = Net_continuous(n_classes=5, device=device)
 	print(net)
 	net = net.to(device)
 
