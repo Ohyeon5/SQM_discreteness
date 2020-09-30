@@ -30,7 +30,7 @@ def train_net(device, param):
 	# Load train and validation data in batches
 	batch_size   = param['batch_size']
 	n_epochs     = param['epochs']
-	lr = 1e-4
+	lr = 1e-2
 	loader_params = {'batch_size': batch_size, 'shuffle': True, 'num_workers': 2}
 
 	train_loader = DataLoader(train_dataset, **loader_params)
@@ -46,8 +46,13 @@ def train_net(device, param):
 		net = Net_continuous(n_classes=n_classes, device=device)
 		print('Training Net_continuous ...')
 	elif 'Net_disc_low' in param['model_name']:
-		net = Net_disc_low(n_classes=n_classes, device=device, window=3,disc_type='simple')
-		print('Training Net_disc_low ...')
+		disc_type = 'simple' if 'simple' in param['model_name'] else 'redundant'
+		net = Net_disc_low(n_classes=n_classes, device=device, window=3,disc_type=disc_type)
+		print('Training Net_disc_low ' +disc_type+'...')
+	elif 'Net_disc_high' in param['model_name']:
+		disc_type = 'simple' if 'simple' in param['model_name'] else 'redundant'
+		net = Net_disc_high(n_classes=n_classes, device=device, window=3,disc_type=disc_type)
+		print('Training Net_disc_high ' +disc_type+'...')
 	net = net.to(device)
 
 	criterion = nn.CrossEntropyLoss().to(device)
@@ -162,6 +167,6 @@ if __name__ == '__main__':
 	use_gpu=1
 	device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 	print(torch.cuda.is_available())
-	print('Running with '+str(device)+'...')
+	print('Running with '+str(device)+'... model '+param['model_name'])
 
 	train_net(device, param)

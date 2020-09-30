@@ -63,11 +63,10 @@ class Net_disc_high(nn.Module):
 
 		# discrete step: high level - redundant - repeat the output of nth frame to have same T
 		imgs = []
-		for t in range(0, x.shape[1], self.window):
-			mm = x[-1][:,t,:,:,:].unsqueeze(1).repeat(1,2,1,1,1)
+		for t in range(0, x[-1].shape[1], self.window):
+			mm = x[-1][:,t,:,:,:].unsqueeze(1).repeat(1,min(self.window, x[-1].shape[1]-t),1,1,1)
 			imgs.append(mm)
 		img = torch.cat(imgs,1)
-		print(self.disc_type, img.shape)
 
 		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
@@ -84,7 +83,6 @@ class Net_disc_high(nn.Module):
 
 		# discrete step: high level - simple - every window frame
 		img = x[-1][:,slice(self.window-1,None,self.window),:,:,:]
-		print(self.disc_type, img.shape)
 
 		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
@@ -146,9 +144,8 @@ class Net_disc_low(nn.Module):
 		for t in range(0, x.shape[1], self.window):
 			ind_end = t+self.window if t+self.window<x.shape[1] else None
 			mm = self.primary_convlstm(x[:,t:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
-			imgs.append(mm[-1][:,-1,:,:,:].unsqueeze(1).repeat(1,self.window,1,1,1))
+			imgs.append(mm[-1][:,-1,:,:,:].unsqueeze(1).repeat(1,min(self.window,x.shape[1]-t),1,1,1))
 		img = torch.cat(imgs,1) # stacked img: 5D tensor => B x T x C x H x W
-		print(self.disc_type, img.shape)
 
 		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
@@ -167,10 +164,8 @@ class Net_disc_low(nn.Module):
 		for t in range(0, x.shape[1], self.window):
 			ind_end = t+self.window if t+self.window<x.shape[1] else None
 			mm = self.primary_convlstm(x[:,t:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
-			
 			imgs.append(mm[-1][:,-1,:,:,:])
 		img = torch.stack(imgs,1) # stacked img: 5D tensor => B x T x C x H x W
-		print(self.disc_type, img.shape)
 		
 		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
