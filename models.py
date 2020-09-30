@@ -212,7 +212,7 @@ class Net_continuous(nn.Module):
 	def forward(self,x):
 		# arg: x is a list of images
 
-		img = self.primaryConv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		img = self.primary_Conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
 		img, _ = self.primary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
