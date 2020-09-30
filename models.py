@@ -13,15 +13,22 @@ from convlstm_SreenivasVRao import *
 #   Networks  #
 ###############
 
-# Discrete network: Low level - simple
-class Net_disc_low_s(nn.Module):
+# Discrete network: High level 
+class Net_disc_high(nn.Module):
 
-	def __init__(self, n_classes, window, n_convBlocks=2, norm_type='bn', conv_n_feats=[3, 32, 64], 
+	'''
+	High level discrete network with 'simple' or 'redundant' secondary convLSTM 
+	Input images are processed continuously in the primary convlstm 
+	and then outputs from every window frame are fed to secondary convlstm
+	'''
+
+	def __init__(self, n_classes, window, disc_type='simple', n_convBlocks=2, norm_type='bn', conv_n_feats=[3, 32, 64], 
 				 clstm_hidden=[128, 256], return_all_layers=True, device='cpu',
 				 fc_n_hidden=None):
-		super(Net_continuous, self).__init__()
+		super(Net_disc_high, self).__init__()
 
 		# initial parameter settings
+		self.disc_type    = disc_type	# 'simple' or 'redundant' is available in the moment
 		self.n_classes    = n_classes
 		self.window       = window
 		self.device       = device
@@ -44,10 +51,24 @@ class Net_disc_low_s(nn.Module):
 												hidden_channels=self.fc_n_hidden, norm_type=norm_type)
 
 	def forward(self,x):
-		# arg: x is a list of images
+		if self.disc_type is 'simple':
+			return forward_simple(self,x)
+		elif self.disc_type is 'redundant':
+			return forward_redundant(self,x)
 
-		img = self.primaryConv3D(img)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
-		img, _ = self.primary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+	def forward_redundant(self,x):
+		# arg: x is a list of images
+		x    = self.primaryConv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		x, _ = self.primary_convlstm(x)
+
+		# discrete step: high level - redundant - repeat the output of nth frame to have same T
+		imgs = []
+		for t in range(0, x.shape[1], self.window):
+			mm = x[:,t*self.window,:,:,:].unsqueeze(1).repeat(1,2,1,1,1)
+			imgs.append(mm)
+		img = torch.cat(imgs,1)
+		print(self.disc_type, img.shape)
+
 		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
 		# Base Network: use the last layer only
@@ -55,6 +76,109 @@ class Net_disc_low_s(nn.Module):
 		img = self.ff_classifier(img)
 
 		return img
+
+	def forward_simple(self,x):
+		# arg: x is a list of images
+		x = self.primaryConv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		x, _ = self.primary_convlstm(x)
+
+		# discrete step: high level - simple - every window frame
+		img = x[:,slice(self.window-1,None,self.window),:,:,:]
+		print(self.disc_type, img.shape)
+
+		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+
+		# Base Network: use the last layer only
+		img = img[-1][:,-1,:,:,:].squeeze()
+		img = self.ff_classifier(img)
+
+		return img
+
+# Discrete network: Low level - simple
+class Net_disc_low(nn.Module):
+
+	'''
+	Low level discrete network with 'simple' or 'redundant' secondary convLSTM 
+	Input images are divided every 'window' frames and are processed in individual primary_convlstm 
+	and only the last output from each window are stacked and fed to secondary convlstm
+	'''
+
+	def __init__(self, n_classes, window, disc_type='simple', n_convBlocks=2, norm_type='bn', conv_n_feats=[3, 32, 64], 
+				 clstm_hidden=[128, 256], return_all_layers=True, device='cpu',
+				 fc_n_hidden=None):
+		super(Net_disc_low, self).__init__()
+
+		# initial parameter settings
+		self.disc_type    = disc_type	# 'simple' or 'redundant' is available in the moment
+		self.n_classes    = n_classes
+		self.window       = window
+		self.device       = device
+		self.conv_n_feats = conv_n_feats
+		self.clstm_hidden = clstm_hidden
+		if fc_n_hidden is None:
+			self.fc_n_hidden = n_classes*5
+		else: 
+			self.fc_n_hidden = fc_n_hidden
+
+		# primary convolution blocks for preprocessing and feature extraction
+		self.primary_Conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats)
+
+		# Two layers of convLSTM
+		self.primary_convlstm   = ConvLSTM_block(in_channels=self.conv_n_feats[n_convBlocks],hidden_channels=self.clstm_hidden[0], 
+												 return_all_layers=True, device=self.device)
+		self.secondary_convlstm = ConvLSTM_block(in_channels=self.clstm_hidden[0],hidden_channels=self.clstm_hidden[1], 
+												 return_all_layers=return_all_layers, device=self.device)
+		self.ff_classifier      = FF_classifier(in_channels=self.clstm_hidden[-1], n_classes=self.n_classes, 
+												hidden_channels=self.fc_n_hidden, norm_type=norm_type)
+
+	def forward(self,x):
+		if self.disc_type is 'simple':
+			return forward_simple(self,x)
+		elif self.disc_type is 'redundant':
+			return forward_redundant(self,x)
+
+	def forward_redundant(self,x):
+		# arg: x is a list of images
+		x = self.primaryConv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		
+		# discrete step: input is fed every window frames individually, and only the last output of the primary convlstm is saved
+		imgs = []
+		for t in range(0, x.shape[1], self.window):
+			ind_end = (t+1)*self.window if (t+1)*self.window<x.shape[1] else None
+			mm, _ = self.primary_convlstm(x[:,t*self.window:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
+			imgs.append(mm[-1][:,-1,:,:,:].unsqueeze(1).repeat(1,self.window,1,1,1))
+		img = torch.cat(imgs,1) # stacked img: 5D tensor => B x T x C x H x W
+		print(self.disc_type, img.shape)
+
+		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+
+		# Base Network: use the last layer only
+		img = img[-1][:,-1,:,:,:].squeeze()
+		img = self.ff_classifier(img)
+
+		return img
+
+	def forward_simple(self,x):
+		# arg: x is a list of images
+		x = self.primaryConv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		
+		# discrete step: input is fed every window frames individually, and only the last output of the primary convlstm is saved
+		imgs = []
+		for t in range(0, x.shape[1], self.window):
+			ind_end = (t+1)*self.window if (t+1)*self.window<x.shape[1] else None
+			mm, _ = self.primary_convlstm(x[:,t*self.window:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
+			imgs.append(mm[-1][:,-1,:,:,:])
+		img = torch.stack(imgs,1) # stacked img: 5D tensor => B x T x C x H x W
+		print(self.disc_type, img.shape)
+		
+		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+
+		# Base Network: use the last layer only
+		img = img[-1][:,-1,:,:,:].squeeze()
+		img = self.ff_classifier(img)
+
+		return img
+
 
 # Baseline network (continuous)
 class Net_continuous(nn.Module):
@@ -88,7 +212,7 @@ class Net_continuous(nn.Module):
 	def forward(self,x):
 		# arg: x is a list of images
 
-		img = self.primaryConv3D(img)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		img = self.primaryConv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
 		img, _ = self.primary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
