@@ -40,7 +40,7 @@ class Net_disc_high(nn.Module):
 			self.fc_n_hidden = fc_n_hidden
 
 		# primary convolution blocks for preprocessing and feature extraction
-		self.primary_Conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats)
+		self.primary_conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats)
 
 		# Two layers of convLSTM
 		self.primary_convlstm   = ConvLSTM_block(in_channels=self.conv_n_feats[n_convBlocks],hidden_channels=self.clstm_hidden[0], 
@@ -58,7 +58,7 @@ class Net_disc_high(nn.Module):
 
 	def forward_redundant(self,x):
 		# arg: x is a list of images
-		x    = self.primaryConv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		x    = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
 		x, _ = self.primary_convlstm(x)
 
 		# discrete step: high level - redundant - repeat the output of nth frame to have same T
@@ -79,7 +79,7 @@ class Net_disc_high(nn.Module):
 
 	def forward_simple(self,x):
 		# arg: x is a list of images
-		x = self.primaryConv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		x = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
 		x, _ = self.primary_convlstm(x)
 
 		# discrete step: high level - simple - every window frame
@@ -121,7 +121,7 @@ class Net_disc_low(nn.Module):
 			self.fc_n_hidden = fc_n_hidden
 
 		# primary convolution blocks for preprocessing and feature extraction
-		self.primary_Conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats)
+		self.primary_conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats)
 
 		# Two layers of convLSTM
 		self.primary_convlstm   = ConvLSTM_block(in_channels=self.conv_n_feats[n_convBlocks],hidden_channels=self.clstm_hidden[0], 
@@ -139,7 +139,7 @@ class Net_disc_low(nn.Module):
 
 	def forward_redundant(self,x):
 		# arg: x is a list of images
-		x = self.primaryConv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		x = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
 		
 		# discrete step: input is fed every window frames individually, and only the last output of the primary convlstm is saved
 		imgs = []
@@ -199,7 +199,7 @@ class Net_continuous(nn.Module):
 			self.fc_n_hidden = fc_n_hidden
 
 		# primary convolution blocks for preprocessing and feature extraction
-		self.primary_Conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats)
+		self.primary_conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats)
 
 		# Two layers of convLSTM
 		self.primary_convlstm   = ConvLSTM_block(in_channels=self.conv_n_feats[n_convBlocks],hidden_channels=self.clstm_hidden[0], 
@@ -212,7 +212,7 @@ class Net_continuous(nn.Module):
 	def forward(self,x):
 		# arg: x is a list of images
 
-		img = self.primary_Conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		img = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
 		img, _ = self.primary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 		img, _ = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
@@ -244,14 +244,14 @@ class Primary_conv3D(nn.Module):
 			block = Conv3D_Block(self.conv_n_feats[ii],self.conv_n_feats[ii+1],norm_type=norm_type)
 			layers.append(block)
 
-		self.primary_Conv3D = nn.Sequential(*layers)
+		self.primary_conv3D = nn.Sequential(*layers)
 
 	def forward(self, x):	
 		# arg: x is a list of images
 		# Stack to 5D layer and then pass 5d (BxCxTxHxW) to primaryConv3D and transpose it to BxTxCxHxW
 
 		img = torch.stack(x,2) # stacked img: 5D tensor => B x C x T x H x W
-		img = self.primaryConv3D(img)
+		img = self.primary_conv3D(img)
 		img = torch.transpose(img,2,1)  # Transpose B x C x T x H x W --> B x T x C x H x W
 
 		return img		
