@@ -42,7 +42,12 @@ def train_net(device, param):
 	tot_batch = len(train_loader)
 	print('There are {} batches'.format(tot_batch))
 
-	net = Net_continuous(n_classes=n_classes, device=device)
+	if 'Net_continuous' in param['model_name']:
+		net = Net_continuous(n_classes=n_classes, device=device)
+		print('Training Net_continuous ...')
+	elif 'Net_disc_low' in param['model_name']:
+		net = Net_disc_low(n_classes=n_classes, device=device, window=3,disc_type='simple')
+		print('Training Net_disc_low ...')
 	net = net.to(device)
 
 	criterion = nn.CrossEntropyLoss().to(device)

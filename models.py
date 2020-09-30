@@ -52,9 +52,9 @@ class Net_disc_high(nn.Module):
 
 	def forward(self,x):
 		if self.disc_type is 'simple':
-			return forward_simple(self,x)
+			return self.forward_simple(x)
 		elif self.disc_type is 'redundant':
-			return forward_redundant(self,x)
+			return self.forward_redundant(x)
 
 	def forward_redundant(self,x):
 		# arg: x is a list of images
@@ -64,7 +64,7 @@ class Net_disc_high(nn.Module):
 		# discrete step: high level - redundant - repeat the output of nth frame to have same T
 		imgs = []
 		for t in range(0, x.shape[1], self.window):
-			mm = x[-1][:,t*self.window,:,:,:].unsqueeze(1).repeat(1,2,1,1,1)
+			mm = x[-1][:,t,:,:,:].unsqueeze(1).repeat(1,2,1,1,1)
 			imgs.append(mm)
 		img = torch.cat(imgs,1)
 		print(self.disc_type, img.shape)
@@ -133,9 +133,9 @@ class Net_disc_low(nn.Module):
 
 	def forward(self,x):
 		if self.disc_type is 'simple':
-			return forward_simple(self,x)
+			return self.forward_simple(x)
 		elif self.disc_type is 'redundant':
-			return forward_redundant(self,x)
+			return self.forward_redundant(x)
 
 	def forward_redundant(self,x):
 		# arg: x is a list of images
@@ -144,8 +144,8 @@ class Net_disc_low(nn.Module):
 		# discrete step: input is fed every window frames individually, and only the last output of the primary convlstm is saved
 		imgs = []
 		for t in range(0, x.shape[1], self.window):
-			ind_end = (t+1)*self.window if (t+1)*self.window<x.shape[1] else None
-			mm = self.primary_convlstm(x[:,t*self.window:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
+			ind_end = t+self.window if t+self.window<x.shape[1] else None
+			mm = self.primary_convlstm(x[:,t:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
 			imgs.append(mm[-1][:,-1,:,:,:].unsqueeze(1).repeat(1,self.window,1,1,1))
 		img = torch.cat(imgs,1) # stacked img: 5D tensor => B x T x C x H x W
 		print(self.disc_type, img.shape)
@@ -160,13 +160,14 @@ class Net_disc_low(nn.Module):
 
 	def forward_simple(self,x):
 		# arg: x is a list of images
-		x = self.primaryConv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
+		x = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
 		
 		# discrete step: input is fed every window frames individually, and only the last output of the primary convlstm is saved
 		imgs = []
 		for t in range(0, x.shape[1], self.window):
-			ind_end = (t+1)*self.window if (t+1)*self.window<x.shape[1] else None
-			mm = self.primary_convlstm(x[:,t*self.window:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
+			ind_end = t+self.window if t+self.window<x.shape[1] else None
+			mm = self.primary_convlstm(x[:,t:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
+			
 			imgs.append(mm[-1][:,-1,:,:,:])
 		img = torch.stack(imgs,1) # stacked img: 5D tensor => B x T x C x H x W
 		print(self.disc_type, img.shape)
@@ -379,7 +380,7 @@ if __name__ == '__main__':
 	x_in = [x1,x2,x3]
 	out  = net(x_in)
 
-	print(out.shape)
+	print(out)
 	out.sum().backward()
 
 	# # gradient check
