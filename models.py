@@ -267,7 +267,7 @@ class ConvLSTM_block(nn.Module):
 
 		self.convlstm_block   = ConvLSTM(in_channels=in_channels, hidden_channels=hidden_channels, 
 										   kernel_size=kernel_size, num_layers=num_layers, bias=True, 
-										   batch_first=True, return_all_layers=return_all_layers, device=self.device)
+										   batch_first=True, return_all_layers=return_all_layers, device=device)
 
 	def forward(self, x):	
 		# arg: x is a 5D tensor => B x T x Filters x H x W
