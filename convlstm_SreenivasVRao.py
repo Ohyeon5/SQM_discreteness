@@ -6,6 +6,7 @@ https://github.com/shreyaspadhy/UNet-Zoo/blob/master/CLSTM.py
 https://github.com/SreenivasVRao/ConvGRU-ConvLSTM-PyTorch
 
 HISTORY
+- 2020-09-29 (Oh-hyeon Choung) : enable num_layer == 1, thus kernal_size can be int now 
 - 2020-06-29 (Oh-hyeon Choung) : ConvLSTM._init_hidden() removed .cuda() part
 - 2020-07-10 (Oh-hyeon Choung) : Add 'device' argument in all classes 
 """
@@ -28,7 +29,7 @@ class ConvLSTMCell(nn.Module):
         self.hidden_dim = hidden_channels
 
         self.kernel_size = kernel_size
-        self.padding = kernel_size[0] // 2, kernel_size[1] // 2
+        self.padding = [self.kernel_size[ii]//2 for ii in range(len(self.kernel_size))]
         self.bias = bias
         
         self.conv = nn.Conv2d(in_channels=self.input_dim + self.hidden_dim,
@@ -214,9 +215,9 @@ if __name__ == "__main__":
     # out.sum().backward()
 
     # Oh-hyeon's convLSTM explorations
-
-    clstm = ConvLSTM(in_channels=32, hidden_channels=[64,64], kernel_size=(3, 3), num_layers=2, batch_first=True, return_all_layers=False).to(device)
+    clstm = ConvLSTM(in_channels=32, hidden_channels=64, kernel_size=(3,3), num_layers=1, batch_first=True, return_all_layers=False, device=device).to(device)
     x_fwd = torch.stack([x1, x2, x3], dim=1)
     out,_ = clstm(x_fwd)
 
     print(out[0].shape)
+    print(clstm)

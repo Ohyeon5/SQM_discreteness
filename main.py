@@ -5,6 +5,7 @@ from utils 	     import *
 
 from math import floor, ceil
 import matplotlib.pyplot as plt
+import time
 
 import os
 import torch
@@ -27,8 +28,8 @@ def train_net(device, param):
 	val_dataset   = HDF5Dataset(file_path =val_fn, **hdf5_params)
 
 	# Load train and validation data in batches
-	batch_size   = 20
-	n_epochs = 300
+	batch_size   = param['batch_size']
+	n_epochs     = param['epochs']
 	lr = 1e-4
 	loader_params = {'batch_size': batch_size, 'shuffle': True, 'num_workers': 2}
 
@@ -41,7 +42,7 @@ def train_net(device, param):
 	tot_batch = len(train_loader)
 	print('There are {} batches'.format(tot_batch))
 
-	net = BaseNet(in_channels=3, n_classes=n_classes, device=device)
+	net = Net_continuous(in_channels=3, n_classes=n_classes, device=device)
 	net = net.to(device)
 
 	criterion = nn.CrossEntropyLoss().to(device)
@@ -70,7 +71,7 @@ def train_net(device, param):
 	net.train()
 
 	for epoch in range(epoch_start,n_epochs):  # loop over the dataset multiple times
-
+		time_start = time.time()
 		net.train()
 		
 		running_loss = 0.0
@@ -101,7 +102,7 @@ def train_net(device, param):
 			pc           += sum(output_ids.to('cpu').detach().numpy().argmax(axis=1)==label_id.to('cpu').detach().numpy())/len(label_id)
 			
 		# print loss statistics every epoch
-		print('Epoch: {}, Avg. Loss: {}, Avg. pc: {}'.format(epoch, running_loss/(batch_i+1), pc/(batch_i+1)))
+		print('Epoch: {}, Avg. Loss: {}, Avg. pc: {}, took {}'.format(epoch, running_loss/(batch_i+1), pc/(batch_i+1), time.strftime("%H:%M:%S", time.gmtime(time.time()-time_start))))
 		logger['train_loss'][epoch] = running_loss/(batch_i+1)
 		logger['train_pc'][epoch]   = pc/(batch_i+1)
 		running_loss = 0.0
@@ -138,8 +139,9 @@ def train_net(device, param):
 	plt.figure()
 
 	for pi,(log_key,log_val) in enumerate(logger.items()):
-		plt.subplots(2,2,pi+1)
-		plt.plot(logger[log_key],label=log_key)
+		print(pi,log_key)
+		plt.subplot(2,2,pi+1)
+		plt.scatter(np.arange(0,len(log_val)),log_val,label=log_key, s=5)
 		plt.legend(loc='upper right')
 		plt.title(log_key)
 
