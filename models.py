@@ -40,7 +40,7 @@ class Net_disc_high(nn.Module):
 			self.fc_n_hidden = fc_n_hidden
 
 		# primary convolution blocks for preprocessing and feature extraction
-		self.primary_conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats)
+		self.primary_conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats,device=self.device)
 
 		# Two layers of convLSTM
 		self.primary_convlstm   = ConvLSTM_block(in_channels=self.conv_n_feats[n_convBlocks],hidden_channels=self.clstm_hidden[0], 
@@ -121,7 +121,7 @@ class Net_disc_low(nn.Module):
 			self.fc_n_hidden = fc_n_hidden
 
 		# primary convolution blocks for preprocessing and feature extraction
-		self.primary_conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats)
+		self.primary_conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats,device=self.device)
 
 		# Two layers of convLSTM
 		self.primary_convlstm   = ConvLSTM_block(in_channels=self.conv_n_feats[n_convBlocks],hidden_channels=self.clstm_hidden[0], 
@@ -199,7 +199,7 @@ class Net_continuous(nn.Module):
 			self.fc_n_hidden = fc_n_hidden
 
 		# primary convolution blocks for preprocessing and feature extraction
-		self.primary_conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats)
+		self.primary_conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats,device=self.device)
 
 		# Two layers of convLSTM
 		self.primary_convlstm   = ConvLSTM_block(in_channels=self.conv_n_feats[n_convBlocks],hidden_channels=self.clstm_hidden[0], 
@@ -232,10 +232,11 @@ class Primary_conv3D(nn.Module):
 	'''
 	Primary feedforward feature extraction convolution layers 
 	'''
-	def __init__(self, n_convBlocks=2, norm_type='bn',conv_n_feats=[3, 32, 64]):
+	def __init__(self, n_convBlocks=2, norm_type='bn',conv_n_feats=[3, 32, 64],device='cpu'):
 		super(Primary_conv3D, self).__init__()
 
 		# initial parameter settings
+		self.device = device
 		self.conv_n_feats = conv_n_feats
 
 		# primary convolution blocks for preprocessing and feature extraction
@@ -250,7 +251,7 @@ class Primary_conv3D(nn.Module):
 		# arg: x is a list of images
 		# Stack to 5D layer and then pass 5d (BxCxTxHxW) to primaryConv3D and transpose it to BxTxCxHxW
 
-		img = torch.stack(x,2) # stacked img: 5D tensor => B x C x T x H x W
+		img = torch.stack(x,2).to(self.device) # stacked img: 5D tensor => B x C x T x H x W
 		img = self.primary_conv3D(img)
 		img = torch.transpose(img,2,1)  # Transpose B x C x T x H x W --> B x T x C x H x W
 
