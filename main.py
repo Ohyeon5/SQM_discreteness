@@ -57,7 +57,10 @@ def train_net(device, param):
 
 	criterion = nn.CrossEntropyLoss().to(device)
 
-	print('parameters {}'.format(list(net.parameters())))
+	# network parameter check
+	for name, pp in net.parameters(): 
+		print(name, pp.data)
+		
 	optimizer   = torch.optim.Adam(net.parameters(), lr=lr)
 	epoch_start = 0
 	# save ckpt and loggers every epoch
