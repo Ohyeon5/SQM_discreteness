@@ -69,4 +69,4 @@ def plot_grad_flow(named_parameters):
     plt.title("Gradient flow")
     plt.grid(True)
 
-	plt.savefig('gard_flow.png')
+    plt.savefig('gard_flow.png')
