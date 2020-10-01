@@ -9,6 +9,7 @@ def get_configs():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--config", dest="config", help="Configuration file used to run the script", required=True)
 	parser.add_argument("--model_name", type=str, default=None, help='network type')
+	parser.add_argument("-e", "--epochs", type=int, default=None, help='number of epochs')
 	args = parser.parse_args()
 
 	config = configparser.RawConfigParser(allow_no_value=True)
@@ -45,5 +46,8 @@ def get_configs():
 	# overwrite experiment specific parameters
 	if args.model_name is not None:
 		param['model_name'] = args.model_name
+	if args.epochs is not None:
+		param['epochs'] = args.epochs
+	
 
 	return param
