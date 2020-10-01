@@ -57,9 +57,9 @@ def train_net(device, param):
 
 	criterion = nn.CrossEntropyLoss().to(device)
 
-	# network parameter check
-	for name, pp in net.named_parameters(): 
-		print(name, pp.data)
+	# # network parameter check
+	# for name, pp in net.named_parameters(): 
+	# 	print(name, pp.requires_grad pp.data)
 
 	optimizer   = torch.optim.Adam(net.parameters(), lr=lr)
 	epoch_start = 0
@@ -107,6 +107,7 @@ def train_net(device, param):
 
 			# backward pass to calculate the weight gradients
 			loss.backward()
+			plot_grad_flow(net.named_parameters())
 
 			# update the weights
 			optimizer.step()
