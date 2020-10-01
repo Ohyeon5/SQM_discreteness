@@ -108,7 +108,6 @@ def train_net(device, param):
 			# backward pass to calculate the weight gradients
 			loss.backward()
 			plot_grad_flow(net.named_parameters())
-			plt.show()
 
 			# update the weights
 			optimizer.step()
