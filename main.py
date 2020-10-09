@@ -43,15 +43,15 @@ def train_net(device, param):
 	print('There are {} batches'.format(tot_batch))
 
 	if 'Net_continuous' in param['model_name']:
-		net = Net_continuous(n_classes=n_classes, norm_type='bn', device=device)
+		net = Net_continuous(n_classes=n_classes, return_all_layers=False, device=device)
 		print('Training Net_continuous ...')
 	elif 'Net_disc_low' in param['model_name']:
 		disc_type = 'simple' if 'simple' in param['model_name'] else 'redundant'
-		net = Net_disc_low(n_classes=n_classes, device=device, window=3,disc_type=disc_type)
+		net = Net_disc_low(n_classes=n_classes, device=device, window=3,return_all_layers=False, disc_type=disc_type)
 		print('Training Net_disc_low ' +disc_type+'...')
 	elif 'Net_disc_high' in param['model_name']:
 		disc_type = 'simple' if 'simple' in param['model_name'] else 'redundant'
-		net = Net_disc_high(n_classes=n_classes, device=device, window=3,disc_type=disc_type)
+		net = Net_disc_high(n_classes=n_classes, device=device, window=3,return_all_layers=False, disc_type=disc_type)
 		print('Training Net_disc_high ' +disc_type+'...')
 	net = net.to(device)
 

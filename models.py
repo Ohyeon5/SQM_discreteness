@@ -64,7 +64,7 @@ class Net_disc_high(nn.Module):
 		# discrete step: high level - redundant - repeat the output of nth frame to have same T
 		imgs = []
 		for t in range(0, x[-1].shape[1], self.window):
-			mm = x[-1][:,t,:,:,:].unsqueeze(1).repeat(1,min(self.window, x[-1].shape[1]-t),1,1,1)
+			mm = x[0][:,t,:,:,:].unsqueeze(1).repeat(1,min(self.window, x[-1].shape[1]-t),1,1,1)
 			imgs.append(mm)
 		img = torch.cat(imgs,1)
 
@@ -82,7 +82,7 @@ class Net_disc_high(nn.Module):
 		x = self.primary_convlstm(x)
 
 		# discrete step: high level - simple - every window frame
-		img = x[-1][:,slice(self.window-1,None,self.window),:,:,:]
+		img = x[0][:,slice(self.window-1,None,self.window),:,:,:]
 
 		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
 
@@ -144,7 +144,7 @@ class Net_disc_low(nn.Module):
 		for t in range(0, x.shape[1], self.window):
 			ind_end = t+self.window if t+self.window<x.shape[1] else None
 			mm = self.primary_convlstm(x[:,t:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
-			imgs.append(mm[-1][:,-1,:,:,:].unsqueeze(1).repeat(1,min(self.window,x.shape[1]-t),1,1,1))
+			imgs.append(mm[0][:,-1,:,:,:].unsqueeze(1).repeat(1,min(self.window,x.shape[1]-t),1,1,1))
 		img = torch.cat(imgs,1) # stacked img: 5D tensor => B x T x C x H x W
 
 		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
@@ -164,7 +164,7 @@ class Net_disc_low(nn.Module):
 		for t in range(0, x.shape[1], self.window):
 			ind_end = t+self.window if t+self.window<x.shape[1] else None
 			mm = self.primary_convlstm(x[:,t:ind_end,:,:,:]) # mm: 5D tensor => B x T x Filters x H x W
-			imgs.append(mm[-1][:,-1,:,:,:])
+			imgs.append(mm[0][:,-1,:,:,:])
 		img = torch.stack(imgs,1) # stacked img: 5D tensor => B x T x C x H x W
 		
 		img = self.secondary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
@@ -215,11 +215,11 @@ class Net_continuous(nn.Module):
 
 		img = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
 		img = self.primary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
-		img = self.secondary_convlstm(img[-1])  	# img: 5D tensor => B x T x Filters x H x W
+		img = self.secondary_convlstm(img[0])  	# img: 5D tensor => B x T x Filters x H x W
 		# img,_ = self.convlstm(img)
 
 		# Base Network: use the last layer only
-		img = img[-1][:,-1,:,:,:].squeeze()
+		img = img[0][:,-1,:,:,:].squeeze()
 		# print(img.mean())
 		img = self.ff_classifier(img)
 		# print(img.mean())
