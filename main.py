@@ -30,7 +30,7 @@ def train_net(device, param):
 	# Load train and validation data in batches
 	batch_size   = param['batch_size']
 	n_epochs     = param['epochs']
-	lr = 1e-2
+	lr = 1e-4
 	loader_params = {'batch_size': batch_size, 'shuffle': True, 'num_workers': 2}
 
 	train_loader = DataLoader(train_dataset, **loader_params)
@@ -43,7 +43,7 @@ def train_net(device, param):
 	print('There are {} batches'.format(tot_batch))
 
 	if 'Net_continuous' in param['model_name']:
-		net = Net_continuous(n_classes=n_classes, device=device)
+		net = Net_continuous(n_classes=n_classes, norm_type='bn', device=device)
 		print('Training Net_continuous ...')
 	elif 'Net_disc_low' in param['model_name']:
 		disc_type = 'simple' if 'simple' in param['model_name'] else 'redundant'
@@ -107,17 +107,27 @@ def train_net(device, param):
 
 			# backward pass to calculate the weight gradients
 			loss.backward()
-			plot_grad_flow(net.named_parameters())
+
+			# check gradients
+			ave_grads  = 0
+			count_grad = 0
+			for n, p in net.named_parameters():
+				if(p.requires_grad) and ("bias" not in n):
+					ave_grads +=p.grad.abs().mean()
+					count_grad +=1
 
 			# update the weights
 			optimizer.step()
 
 			# calculate the accuracy
-			running_loss += loss.item()
-			pc           += sum(output_ids.to('cpu').detach().numpy().argmax(axis=1)==label_id.to('cpu').detach().numpy())/len(label_id)
+			batch_loss    = loss.item()
+			batch_pc      = sum(output_ids.to('cpu').detach().numpy().argmax(axis=1)==label_id.to('cpu').detach().numpy())/len(label_id)
+			running_loss += batch_loss
+			pc           += batch_pc
+			print('Epoch {}, batch {}, batch loss {:.4f}, batch pc {}, gradients {} ele {:.4f}'.format(epoch,batch_i,batch_loss,batch_pc,count_grad,ave_grads), end='\r')
 			
 		# print loss statistics every epoch
-		print('Epoch: {}, Avg. Loss: {}, Avg. pc: {}, took {}'.format(epoch, running_loss/(batch_i+1), pc/(batch_i+1), time.strftime("%H:%M:%S", time.gmtime(time.time()-time_start))))
+		print('Epoch: {}, Avg. Loss: {:.4f}, Avg. pc: {}, took {} \n'.format(epoch, running_loss/(batch_i+1), pc/(batch_i+1), time.strftime("%H:%M:%S", time.gmtime(time.time()-time_start))))
 		logger['train_loss'][epoch] = running_loss/(batch_i+1)
 		logger['train_pc'][epoch]   = pc/(batch_i+1)
 		running_loss = 0.0
