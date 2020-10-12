@@ -198,14 +198,14 @@ class Net_continuous(nn.Module):
 		self.primary_conv3D = Primary_conv3D(n_convBlocks=n_convBlocks, norm_type=norm_type,conv_n_feats=self.conv_n_feats,device=self.device)
 
 		# Two layers of convLSTM
-		self.primary_convlstm   = ConvLSTM_block(in_channels=self.conv_n_feats[n_convBlocks],hidden_channels=self.clstm_hidden[0], 
-												 return_all_layers=True, device=self.device)
-		self.secondary_convlstm = ConvLSTM_block(in_channels=self.clstm_hidden[0],hidden_channels=self.clstm_hidden[1], 
-												 return_all_layers=return_all_layers, device=self.device)
-		# self.convlstm   = ConvLSTM(in_channels=self.conv_n_feats[n_convBlocks], 
-		# 	                       hidden_channels=self.clstm_hidden, kernel_size=(3,3),
-		# 						   num_layers=2, batch_first=True, 
-		# 						   bias=True, return_all_layers=return_all_layers, device=self.device)
+		# self.primary_convlstm   = ConvLSTM_block(in_channels=self.conv_n_feats[n_convBlocks],hidden_channels=self.clstm_hidden[0], 
+		# 										 return_all_layers=True, device=self.device)
+		# self.secondary_convlstm = ConvLSTM_block(in_channels=self.clstm_hidden[0],hidden_channels=self.clstm_hidden[1], 
+		# 										 return_all_layers=return_all_layers, device=self.device)
+		self.convlstm   = ConvLSTM(in_channels=self.conv_n_feats[n_convBlocks], 
+			                       hidden_channels=self.clstm_hidden, kernel_size=(3,3),
+								   num_layers=2, batch_first=True, 
+								   bias=True, return_all_layers=return_all_layers, device=self.device)
 		
 		self.ff_classifier      = FF_classifier(in_channels=self.clstm_hidden[-1], n_classes=self.n_classes, 
 												hidden_channels=self.fc_n_hidden, norm_type=norm_type)
@@ -214,9 +214,9 @@ class Net_continuous(nn.Module):
 		# arg: x is a list of images
 
 		img = self.primary_conv3D(x)  # Primary feature extraction: list x -> B x C x T x H x W transposed to -> B x T x C x H x W
-		img = self.primary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
-		img = self.secondary_convlstm(img[0])  	# img: 5D tensor => B x T x Filters x H x W
-		# img,_ = self.convlstm(img)
+		# img = self.primary_convlstm(img)  	# img: 5D tensor => B x T x Filters x H x W
+		# img = self.secondary_convlstm(img[0])  	# img: 5D tensor => B x T x Filters x H x W
+		img,_ = self.convlstm(img)
 
 		# Base Network: use the last layer only
 		img = img[0][:,-1,:,:,:].squeeze()

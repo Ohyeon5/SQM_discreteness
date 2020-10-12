@@ -172,6 +172,11 @@ def train_net(device, param):
 
 	plt.savefig(this_model_path[:-3]+'.png')
 
+
+def test_net(device, param):
+	# Test network with spatial and temporal noise interventions
+	
+
 # main run function 
 if __name__ == '__main__':
 
